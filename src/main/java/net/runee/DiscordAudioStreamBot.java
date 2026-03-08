@@ -2,12 +2,15 @@ package net.runee;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import moe.kyokobot.libdave.NativeDaveFactory;
+import moe.kyokobot.libdave.jda.LDJDADaveSessionFactory;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.audio.AudioReceiveHandler;
 import net.dv8tion.jda.api.audio.AudioSendHandler;
+import net.dv8tion.jda.api.audio.AudioModuleConfig;
 import net.dv8tion.jda.api.audio.hooks.ConnectionListener;
 import net.dv8tion.jda.api.audio.hooks.ConnectionStatus;
 import net.dv8tion.jda.api.entities.*;
@@ -108,6 +111,8 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
 
     public void login() throws LoginException {
         logger.info("Logging in...");
+        NativeDaveFactory.ensureAvailable();
+
         jda = JDABuilder.create(config.botToken,
                         GatewayIntent.GUILD_MEMBERS,
                         GatewayIntent.GUILD_VOICE_STATES,
@@ -116,6 +121,8 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
                         GatewayIntent.DIRECT_MESSAGES
                         //GatewayIntent.DIRECT_MESSAGE_REACTIONS
                 )
+                .setAudioModuleConfig(new AudioModuleConfig()
+                        .withDaveSessionFactory(new LDJDADaveSessionFactory(new NativeDaveFactory())))
                 .addEventListeners(this)
                 .setEnableShutdownHook(false)
                 .build()
@@ -479,3 +486,4 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
         }
     }
 }
+

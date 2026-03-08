@@ -30,7 +30,21 @@ repositories {
 }
 
 dependencies {
-	implementation 'net.dv8tion:JDA:6.1.0' // discord api
+	implementation 'net.dv8tion:JDA:6.3.1' // discord api + voice DAVE hooks
+    implementation 'moe.kyokobot.libdave:adapter-jda:0.1.2' // JDA DAVE adapter
+    implementation 'moe.kyokobot.libdave:impl-jni:0.1.2' // native-backed DAVE implementation
+    runtimeOnly 'moe.kyokobot.libdave:natives-win-x86-64:0.1.2'
+    runtimeOnly 'moe.kyokobot.libdave:natives-win-x86:0.1.2'
+    runtimeOnly 'moe.kyokobot.libdave:natives-win-aarch64:0.1.2'
+    runtimeOnly 'moe.kyokobot.libdave:natives-linux-x86-64:0.1.2'
+    runtimeOnly 'moe.kyokobot.libdave:natives-linux-x86:0.1.2'
+    runtimeOnly 'moe.kyokobot.libdave:natives-linux-aarch64:0.1.2'
+    runtimeOnly 'moe.kyokobot.libdave:natives-linux-arm:0.1.2'
+    runtimeOnly 'moe.kyokobot.libdave:natives-linux-musl-x86-64:0.1.2'
+    runtimeOnly 'moe.kyokobot.libdave:natives-linux-musl-x86:0.1.2'
+    runtimeOnly 'moe.kyokobot.libdave:natives-linux-musl-aarch64:0.1.2'
+    runtimeOnly 'moe.kyokobot.libdave:natives-linux-musl-arm:0.1.2'
+    runtimeOnly 'moe.kyokobot.libdave:natives-darwin:0.1.2'
 //    implementation 'com.sedmelluq:lavaplayer:1.3.42' // audio player library for discord
     implementation 'com.jgoodies:jgoodies-forms:1.9.0' // ui framework
     implementation 'com.jgoodies:jgoodies-common:1.8.1' // ui framework

@@ -4,8 +4,6 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.core.ConsoleAppender;
 import ch.qos.logback.core.FileAppender;
-import com.jgoodies.common.base.SystemUtils;
-import com.jgoodies.looks.windows.WindowsLookAndFeel;
 import jouvieje.bass.BassInit;
 import net.dv8tion.jda.api.JDA;
 import net.runee.DiscordAudioStreamBot;
@@ -23,6 +21,9 @@ import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 
 public class MainFrame extends JFrame implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(MainFrame.class);
@@ -43,15 +44,13 @@ public class MainFrame extends JFrame implements Runnable {
 
         // set L&F
         try {
-            if (SystemUtils.IS_OS_WINDOWS) {
-                System.setProperty("swing.systemlaf", com.jgoodies.looks.windows.WindowsLookAndFeel.class.getName());
-            }
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             logger.warn("Failed to set L&F", ex);
         }
 
         // load bass natives
+        configureBassLibraryPath();
         BassInit.loadLibraries();
 
         // run app
@@ -77,6 +76,41 @@ public class MainFrame extends JFrame implements Runnable {
 
     private static void onRuntimeShutdown() {
         logger.info("Goodbye!");
+    }
+
+    private static void configureBassLibraryPath() {
+        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+        String arch = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
+        String nativeSubdir;
+
+        if (os.contains("win")) {
+            nativeSubdir = arch.contains("64") ? "win64" : "win32";
+        } else if (os.contains("mac")) {
+            nativeSubdir = "mac";
+        } else if (os.contains("nux") || os.contains("nix") || os.contains("aix")) {
+            nativeSubdir = arch.contains("64") ? "linux64" : "linux32";
+        } else {
+            logger.warn("Unsupported OS for BASS native auto-discovery: {}", os);
+            return;
+        }
+
+        List<File> candidates = Arrays.asList(
+                new File("natives/" + nativeSubdir),
+                new File("../natives/" + nativeSubdir),
+                new File("../../natives/" + nativeSubdir)
+        );
+
+        for (File candidate : candidates) {
+            if (candidate.isDirectory()) {
+                String absolute = candidate.getAbsolutePath();
+                System.setProperty("org.lwjgl.librarypath", absolute);
+                System.setProperty("java.library.path", absolute);
+                logger.info("Using BASS natives: {}", absolute);
+                return;
+            }
+        }
+
+        logger.warn("Could not auto-discover BASS natives in {}", candidates);
     }
 
     private JTabbedPane tabs;
