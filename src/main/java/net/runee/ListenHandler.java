@@ -5,9 +5,12 @@ import jouvieje.bass.structures.HSTREAM;
 import jouvieje.bass.utils.Pointer;
 import net.dv8tion.jda.api.audio.AudioReceiveHandler;
 import net.dv8tion.jda.api.audio.CombinedAudio;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.User;
 import net.runee.errors.BassException;
 import net.runee.misc.MemoryQueue;
 import net.runee.misc.Utils;
+import net.runee.model.GuildConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,13 +46,15 @@ public class ListenHandler implements AudioReceiveHandler, Closeable {
     }
 
     private final Object memoryQueueLock = new Object();
+    private final Guild guild;
     private int playbackDevice;
     private PlaybackResource playbackResource;
     private HSTREAM playbackStream;
     private MemoryQueue memoryQueue;
     private volatile boolean closed;
 
-    public ListenHandler() {
+    public ListenHandler(Guild guild) {
+        this.guild = guild;
         this.playbackDevice = -1;
     }
 
@@ -93,6 +98,12 @@ public class ListenHandler implements AudioReceiveHandler, Closeable {
     @Override
     public boolean canReceiveCombined() {
         return !closed;
+    }
+
+    @Override
+    public boolean includeUserInCombinedAudio(@Nonnull User user) {
+        GuildConfig guildConfig = DiscordAudioStreamBot.getConfig().getGuildConfig(guild);
+        return !guildConfig.isAudioUserMuted(user);
     }
 
     @Override

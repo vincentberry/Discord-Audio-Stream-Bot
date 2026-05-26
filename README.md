@@ -11,8 +11,8 @@ Desktop application for streaming local audio to a Discord voice channel through
 - Stream a local audio source to Discord.
 - Select a microphone or virtual audio device, such as VB-Audio Virtual Cable.
 - Desktop UI for configuring the bot token, audio devices, and voice channels.
-- Maintenance tab showing the connected voice channel, permissions, auto-join settings, and audio restart controls.
-- Discord slash commands for joining/leaving voice, auto-join, follow-audio, and restarting the audio pipeline.
+- Maintenance tab showing the connected voice channel, permissions, auto-join settings, ignored audio users, and audio restart controls.
+- Discord slash commands for joining/leaving voice, auto-join, follow-audio, muting listened users, and restarting the audio pipeline.
 - Native Windows, Linux, and macOS builds with a bundled Java runtime.
 
 ## Installation
@@ -59,6 +59,7 @@ To stream audio from an application or game, use a virtual audio cable such as [
 - `/leave-all` - Leave all connected voice channels. Bot owner only.
 - `/autojoin` - Configure the channel to join automatically.
 - `/follow-audio` - Follow a user across voice channels.
+- `/mute-audio` - Mute/unmute specific users for the bot's audio listener.
 - `/restart-audio` - Restart the audio pipeline for the current server.
 - `/restart-audio all:true` - Restart all audio pipelines. Bot owner only.
 - `/bind` - Restrict which text channels can be used for bot commands.

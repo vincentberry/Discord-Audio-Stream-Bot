@@ -29,6 +29,7 @@ import net.runee.commands.bot.*;
 import net.runee.commands.settings.AutoJoinAudioCommand;
 import net.runee.commands.settings.BindCommand;
 import net.runee.commands.settings.FollowAudioCommand;
+import net.runee.commands.settings.MuteAudioCommand;
 import net.runee.commands.user.*;
 import net.runee.errors.BassException;
 import net.runee.errors.CommandException;
@@ -174,7 +175,8 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
                     // settings
                     new AutoJoinAudioCommand(),
                     new BindCommand(),
-                    new FollowAudioCommand()
+                    new FollowAudioCommand(),
+                    new MuteAudioCommand()
             );
 
             this.commands = new HashMap<>();
@@ -445,7 +447,7 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
         AudioReceiveHandler receivingHandler = audioManager.getReceivingHandler();
         if (listenEnabled) {
             if (receivingHandler == null) {
-                receivingHandler = new ListenHandler();
+                receivingHandler = new ListenHandler(audioManager.getGuild());
             }
             if (receivingHandler instanceof ListenHandler) {
                 try {
