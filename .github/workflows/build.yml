@@ -19,6 +19,7 @@ jobs:
       - name: Create or update GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" \
@@ -47,15 +48,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          git init .
-          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
-          git -c http.extraheader="AUTHORIZATION: bearer $GITHUB_TOKEN" fetch --depth=1 origin "$GITHUB_REF"
-          git checkout --force FETCH_HEAD
+        uses: actions/checkout@v4
 
       - name: Use preinstalled Java 17 (Windows)
         if: runner.os == 'Windows'
@@ -119,6 +112,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           $files = Get-ChildItem -Path build/distributions -Filter '*native-*.zip'
           if ($files.Count -eq 0) {
@@ -132,6 +126,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           shopt -s nullglob
