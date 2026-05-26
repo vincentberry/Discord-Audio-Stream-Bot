@@ -20,7 +20,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.io.File;
+import java.security.CodeSource;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -97,15 +101,26 @@ public class MainFrame extends JFrame implements Runnable {
             return;
         }
 
-        List<File> candidates = Arrays.asList(
+        List<File> candidates = new ArrayList<>(Arrays.asList(
                 new File("natives/" + nativeSubdir),
                 new File("../natives/" + nativeSubdir),
-                new File("../../natives/" + nativeSubdir)
-        );
+                new File("../../natives/" + nativeSubdir),
+                new File(System.getProperty("user.dir"), "natives/" + nativeSubdir)
+        ));
+
+        File appDir = getApplicationDirectory();
+        if (appDir != null) {
+            candidates.add(new File(appDir, "natives/" + nativeSubdir));
+            File parentDir = appDir.getParentFile();
+            if (parentDir != null) {
+                candidates.add(new File(parentDir, "natives/" + nativeSubdir));
+                candidates.add(new File(parentDir, "app/natives/" + nativeSubdir));
+            }
+        }
 
         for (File candidate : candidates) {
-            if (candidate.isDirectory()) {
-                String absolute = candidate.getAbsolutePath();
+            if (candidate != null && candidate.isDirectory()) {
+                String absolute = candidate.getAbsoluteFile().getAbsolutePath();
                 System.setProperty("org.lwjgl.librarypath", absolute);
                 System.setProperty("java.library.path", absolute);
                 logger.info("Using BASS natives: {}", absolute);
@@ -114,6 +129,24 @@ public class MainFrame extends JFrame implements Runnable {
         }
 
         logger.warn("Could not auto-discover BASS natives in {}", candidates);
+    }
+
+    private static File getApplicationDirectory() {
+        try {
+            CodeSource codeSource = MainFrame.class.getProtectionDomain().getCodeSource();
+            if (codeSource == null) {
+                return null;
+            }
+            URL location = codeSource.getLocation();
+            if (location == null) {
+                return null;
+            }
+            File locationFile = new File(location.toURI());
+            return locationFile.isFile() ? locationFile.getParentFile() : locationFile;
+        } catch (URISyntaxException | IllegalArgumentException ex) {
+            logger.warn("Failed to resolve application directory", ex);
+            return null;
+        }
     }
 
     private JTabbedPane tabs;

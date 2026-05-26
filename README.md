@@ -16,9 +16,9 @@
 * Copy the bot token
 * Enable the "SERVER MEMBERS INTENT" (required to check if a user issuing a command has sufficient permissions)
 #### Part 2 - Bot program
-* Download or build the portable package for your operating system. The portable package contains its own Java runtime, so users do not need to install Java 17 manually.
-* To build it from source, run `gradle portableZip`. The package is created in `build/distributions/`.
-* Extract the zip and run `run.bat` on Windows. If you need logs in a console, run `run-console.bat` instead.
+* Download the native app package for your operating system. It contains its own Java runtime, so users do not need to install Java 17 manually.
+* To build it from source, run `gradle nativeImageZip`. The package is created in `build/distributions/`.
+* Extract the zip and launch the application executable for your operating system.
 * In the settings tab, paste your bot token and hit return
 * In the home tab, click the big on/off button to log in to the bot user with the token
 * In the maintenance tab, invite/add the bot to a guild/server, if necessary
@@ -31,6 +31,8 @@
 * Issue the command "/join" to bring the bot user up in a voice channel
 * In the settings tab of the bot program, unmute the bot
 * Choose & select a recording device (default one being your microphone, most likely)
+* You can also use the Maintenance tab to see the connected voice channel, join/leave a voice or stage channel, and set the auto-join channel without opening Discord
+* If audio gets stuck, use the Maintenance tab's "Restart audio" button or the Discord command `/restart-audio`
 * Now it should be sending audio from the selected recording device to discord. Enjoy!
 
 

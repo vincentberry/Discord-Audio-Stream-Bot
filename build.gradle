@@ -118,6 +118,27 @@ def jlinkExecutable = providers.provider {
     executable.absolutePath
 }
 
+def jpackageExecutable = providers.provider {
+    String executableName = Os.isFamily(Os.FAMILY_WINDOWS) ? 'jpackage.exe' : 'jpackage'
+    File javaHome = new File(System.getProperty('java.home'))
+    List<File> candidates = [new File(javaHome, "bin/${executableName}")]
+    if (javaHome.name.equalsIgnoreCase('jre') && javaHome.parentFile != null) {
+        candidates.add(new File(javaHome.parentFile, "bin/${executableName}"))
+    }
+    File executable = candidates.find { it.isFile() }
+    if (executable == null) {
+        throw new GradleException("Unable to find ${executableName}. Build the native app image with a full JDK.")
+    }
+    executable.absolutePath
+}
+
+def nativeAppVersion = providers.provider {
+    String rawVersion = (project.findProperty('appVersion') ?: System.getenv('GITHUB_REF_NAME') ?: project.version).toString()
+    rawVersion = rawVersion.replaceFirst(/^v/, '')
+    def matcher = rawVersion =~ /(\d+(?:\.\d+){0,3})/
+    matcher.find() ? matcher.group(1) : '1.0.0'
+}
+
 def jdkJmodsDir = providers.provider {
     File javaHome = new File(System.getProperty('java.home'))
     List<File> candidates = [new File(javaHome, 'jmods')]
@@ -133,6 +154,8 @@ def jdkJmodsDir = providers.provider {
 
 def portableRuntimeDir = layout.buildDirectory.dir('portable-runtime')
 def portableAppDir = layout.buildDirectory.dir("portable/${appDisplayName}")
+def nativeImageInputDir = layout.buildDirectory.dir('jpackage/input')
+def nativeImageDestDir = layout.buildDirectory.dir('jpackage/image')
 
 tasks.register('portableRuntime', Exec) {
     group = 'distribution'
@@ -221,6 +244,58 @@ tasks.register('portableZip', Zip) {
     from(portableAppDir) {
         into appDisplayName
     }
+}
+
+tasks.register('prepareNativeImageInput', Copy) {
+    group = 'distribution'
+    description = 'Prepares the files consumed by jpackage.'
+    dependsOn shadowJar
+    into nativeImageInputDir
+    doFirst {
+        delete(nativeImageInputDir.get().asFile)
+    }
+    from(tasks.named('shadowJar').flatMap { it.archiveFile }) {
+        rename { 'app.jar' }
+    }
+    from('natives') {
+        into 'natives'
+    }
+}
+
+tasks.register('nativeImage', Exec) {
+    group = 'distribution'
+    description = 'Creates a native application image with a platform launcher and bundled runtime.'
+    dependsOn prepareNativeImageInput, portableRuntime
+    inputs.dir(nativeImageInputDir)
+    inputs.dir(portableRuntimeDir)
+    inputs.property('mainClass', application.mainClass.get())
+    inputs.property('appVersion', nativeAppVersion.get())
+    inputs.property('osClassifier', currentOsClassifier)
+    outputs.dir(nativeImageDestDir)
+    doFirst {
+        delete(nativeImageDestDir.get().asFile)
+    }
+    executable = jpackageExecutable.get()
+    args '--type', 'app-image',
+            '--name', appDisplayName,
+            '--app-version', nativeAppVersion.get(),
+            '--dest', nativeImageDestDir.get().asFile.absolutePath,
+            '--input', nativeImageInputDir.get().asFile.absolutePath,
+            '--main-jar', 'app.jar',
+            '--main-class', application.mainClass.get(),
+            '--runtime-image', portableRuntimeDir.get().asFile.absolutePath
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        args '--java-options', '--add-exports=java.desktop/com.sun.java.swing.plaf.windows=ALL-UNNAMED'
+    }
+}
+
+tasks.register('nativeImageZip', Zip) {
+    group = 'distribution'
+    description = 'Archives the native application image for distribution.'
+    dependsOn nativeImage
+    destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+    archiveFileName.set("${appDisplayName}-native-${currentOsClassifier}.zip")
+    from(nativeImageDestDir)
 }
 
 run {

@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   portable:
-    name: Build ${{ matrix.name }} portable package
+    name: Build ${{ matrix.name }} native app
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -19,13 +19,13 @@ jobs:
         include:
           - name: Windows
             os: windows-latest
-            artifact-name: discord-audio-stream-bot-windows-portable
+            artifact-name: discord-audio-stream-bot-windows-native
           - name: Linux
             os: ubuntu-latest
-            artifact-name: discord-audio-stream-bot-linux-portable
+            artifact-name: discord-audio-stream-bot-linux-native
           - name: macOS
             os: macos-15-intel
-            artifact-name: discord-audio-stream-bot-macos-portable
+            artifact-name: discord-audio-stream-bot-macos-native
 
     steps:
       - name: Checkout
@@ -45,14 +45,14 @@ jobs:
       - name: Compile and test
         run: gradle clean test
 
-      - name: Build portable package
-        run: gradle portableZip
+      - name: Build native app image
+        run: gradle nativeImageZip
 
-      - name: Upload portable package artifact
+      - name: Upload native app artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact-name }}
-          path: build/distributions/*portable-*.zip
+          path: build/distributions/*native-*.zip
           if-no-files-found: error
 
   release:
@@ -62,7 +62,7 @@ jobs:
     if: github.ref_type == 'tag'
 
     steps:
-      - name: Download portable packages
+      - name: Download native apps
         uses: actions/download-artifact@v4
         with:
           path: release-assets

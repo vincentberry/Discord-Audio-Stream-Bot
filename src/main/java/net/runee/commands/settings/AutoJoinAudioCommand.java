@@ -1,6 +1,6 @@
 package net.runee.commands.settings;
 
-import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -25,15 +25,15 @@ public class AutoJoinAudioCommand extends Command {
 
         String op = ensureOptionPresent(ctx, "op").getAsString().toLowerCase(Locale.ROOT);
 
-        VoiceChannel channel = null;
+        AudioChannel channel = null;
 
         switch (op) {
             case "set": {
                 GuildChannel guildChannel = ensureOptionPresent(ctx, "channel").getAsChannel();
-                if (guildChannel instanceof VoiceChannel) {
-                    channel = (VoiceChannel) guildChannel;
+                if (guildChannel instanceof AudioChannel) {
+                    channel = (AudioChannel) guildChannel;
                 } else {
-                    reply(ctx, "Channel is not a voice channel", Utils.colorRed);
+                    reply(ctx, "Channel is not an audio channel", Utils.colorRed);
                     return;
                 }
                 break;
@@ -63,7 +63,7 @@ public class AutoJoinAudioCommand extends Command {
         }
     }
 
-    private void setAutoAudioChannel(SlashCommandInteractionEvent ctx, GuildConfig guildConfig, VoiceChannel channel) {
+    private void setAutoAudioChannel(SlashCommandInteractionEvent ctx, GuildConfig guildConfig, AudioChannel channel) {
         guildConfig.autoJoinAudioChannelId = channel != null ? channel.getId() : null;
         saveConfig();
         if (channel != null) {
@@ -82,7 +82,10 @@ public class AutoJoinAudioCommand extends Command {
     }
 
     private String formatChannel(SlashCommandInteractionEvent ctx, String channelId) {
-        VoiceChannel voiceChannel = ctx.getJDA().getVoiceChannelById(channelId);
-        return "`" + (voiceChannel != null ? Utils.formatChannel(voiceChannel) : channelId) + "`";
+        AudioChannel audioChannel = ctx.getJDA().getVoiceChannelById(channelId);
+        if (audioChannel == null) {
+            audioChannel = ctx.getJDA().getStageChannelById(channelId);
+        }
+        return "`" + (audioChannel != null ? Utils.formatChannel(audioChannel) : channelId) + "`";
     }
 }

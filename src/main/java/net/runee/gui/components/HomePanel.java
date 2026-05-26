@@ -33,6 +33,7 @@ public class HomePanel extends JPanel implements EventListener {
     private JLabel loginLabel;
     private JButton loginButton;
     private JLabel pingLabel;
+    private JLabel voiceLabel;
     private MainFrame mainFrame;
 
     public HomePanel(MainFrame mainFrame) {
@@ -58,6 +59,11 @@ public class HomePanel extends JPanel implements EventListener {
         pingLabel = new JLabel("Ping: N/A");
         pingLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         pingLabel.setFont(pingLabel.getFont().deriveFont(10f));
+
+        voiceLabel = new JLabel();
+        voiceLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        voiceLabel.setFont(voiceLabel.getFont().deriveFont(12f));
+        onVoiceStateChanged();
     }
 
     private void layoutComponents() {
@@ -70,11 +76,13 @@ public class HomePanel extends JPanel implements EventListener {
                         .create()
                         .add("p")
                         .add("f:p:g")
+                        .add("p")
                         .build()
                 )
                 .panel(this)
                 .add(pingLabel).xy(1, row = 1, "r,t")
                 .add(buildCenterPanel()).xy(1, row += 2, "c,c")
+                .add(voiceLabel).xy(1, row += 2, "c,b")
                 .build();
     }
 
@@ -182,6 +190,7 @@ public class HomePanel extends JPanel implements EventListener {
         if (!initial) {
             mainFrame.updateLoginStatus(status);
         }
+        onVoiceStateChanged();
     }
 
     private String format(JDA.Status status) {
@@ -209,6 +218,11 @@ public class HomePanel extends JPanel implements EventListener {
             audioPings.remove(guild);
         }
         updatePingLabel();
+    }
+
+    public void onVoiceStateChanged() {
+        String status = DiscordAudioStreamBot.getInstance().getVoiceStatusSummary();
+        voiceLabel.setText("Voice: " + status);
     }
 
     private void updatePingLabel() {

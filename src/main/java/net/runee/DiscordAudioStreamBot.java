@@ -162,6 +162,7 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
                     new ExitCommand(),
                     new InviteCommand(),
                     new LeaveAudioAllCommand(),
+                    new RestartAudioCommand(),
                     new StopCommand(),
                     // bot user
                     new ActivityCommand(),
@@ -241,6 +242,13 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
 
     @Override
     public void onGuildVoiceUpdate(@NotNull GuildVoiceUpdateEvent event) {
+        if (jda != null && Objects.equals(event.getMember().getId(), jda.getSelfUser().getId())) {
+            EventQueue.invokeLater(() -> {
+                MainFrame.getInstance().tabHome.onVoiceStateChanged();
+                MainFrame.getInstance().tabMaintain.onVoiceStateChanged(event.getGuild());
+            });
+        }
+
         if(!isFollowedVoiceTarget(event.getMember())) {
             return;
         }
@@ -370,6 +378,10 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
             }
         });
         audioManager.openAudioConnection(channel);
+        EventQueue.invokeLater(() -> {
+            MainFrame.getInstance().tabHome.onVoiceStateChanged();
+            MainFrame.getInstance().tabMaintain.onVoiceStateChanged(channel.getGuild());
+        });
     }
 
     public void leaveAudio(Guild guild) {
@@ -381,6 +393,10 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
             if (audioManager.isConnected()) {
                 audioManager.closeAudioConnection();
             }
+            EventQueue.invokeLater(() -> {
+                MainFrame.getInstance().tabHome.onVoiceStateChanged();
+                MainFrame.getInstance().tabMaintain.onVoiceStateChanged(guild);
+            });
         }
     }
 
@@ -483,6 +499,34 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
             updateSpeakState(audioManager, null, null);
             updateListenState(audioManager, null, null);
         }
+    }
+
+    public void restartAudio(Guild guild) {
+        AudioManager audioManager = guild.getAudioManager();
+        if (audioManager.isConnected() || audioManager.getSendingHandler() != null || audioManager.getReceivingHandler() != null) {
+            updateSpeakState(audioManager, false, null);
+            updateListenState(audioManager, false, null);
+            updateSpeakState(audioManager, null, null);
+            updateListenState(audioManager, null, null);
+            EventQueue.invokeLater(() -> {
+                MainFrame.getInstance().tabHome.onVoiceStateChanged();
+                MainFrame.getInstance().tabMaintain.onVoiceStateChanged(guild);
+            });
+        }
+    }
+
+    public String getVoiceStatusSummary() {
+        if (jda == null) {
+            return "Not connected";
+        }
+        List<String> lines = new ArrayList<>();
+        for (AudioManager audioManager : jda.getAudioManagers()) {
+            AudioChannel channel = audioManager.getConnectedChannel();
+            if (channel != null) {
+                lines.add(audioManager.getGuild().getName() + " / " + channel.getName());
+            }
+        }
+        return lines.isEmpty() ? "No voice channel" : String.join(", ", lines);
     }
 
     private List<AudioManager> getConnectedAudioManagers() {
