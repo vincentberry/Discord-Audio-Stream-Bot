@@ -10,9 +10,22 @@ permissions:
   contents: write
 
 jobs:
-  windows-portable:
-    name: Build Windows release
-    runs-on: windows-latest
+  portable:
+    name: Build ${{ matrix.name }} portable package
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            artifact-name: discord-audio-stream-bot-windows-portable
+          - name: Linux
+            os: ubuntu-latest
+            artifact-name: discord-audio-stream-bot-linux-portable
+          - name: macOS
+            os: macos-15-intel
+            artifact-name: discord-audio-stream-bot-macos-portable
 
     steps:
       - name: Checkout
@@ -38,16 +51,28 @@ jobs:
       - name: Upload portable package artifact
         uses: actions/upload-artifact@v4
         with:
-          name: discord-audio-stream-bot-windows-portable
-          path: build/distributions/*portable-windows-*.zip
+          name: ${{ matrix.artifact-name }}
+          path: build/distributions/*portable-*.zip
           if-no-files-found: error
 
+  release:
+    name: Create GitHub release
+    needs: portable
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+
+    steps:
+      - name: Download portable packages
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
       - name: Create GitHub release
-        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
           name: Discord Audio Stream Bot ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
           make_latest: true
-          files: build/distributions/*portable-windows-*.zip
+          files: release-assets/*.zip
