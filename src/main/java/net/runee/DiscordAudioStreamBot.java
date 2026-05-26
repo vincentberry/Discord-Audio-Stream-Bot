@@ -141,6 +141,7 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
     public void logoff() {
         logger.info("Logging off...");
         if (jda != null) {
+            leaveVoiceAll();
             jda.shutdown();
         }
     }
@@ -373,10 +374,13 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
 
     public void leaveAudio(Guild guild) {
         AudioManager audioManager = guild.getAudioManager();
-        if (audioManager.isConnected()) {
+        boolean hasAudioHandlers = audioManager.getSendingHandler() != null || audioManager.getReceivingHandler() != null;
+        if (audioManager.isConnected() || hasAudioHandlers) {
             updateSpeakState(audioManager, false, null);
             updateListenState(audioManager, false, null);
-            audioManager.closeAudioConnection();
+            if (audioManager.isConnected()) {
+                audioManager.closeAudioConnection();
+            }
         }
     }
 
@@ -399,7 +403,7 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
             if (sendingHandler instanceof SpeakHandler) {
                 try {
                     ((SpeakHandler) sendingHandler).openRecordingDevice(Utils.getRecordingDeviceHandle(recordingDevice), audioManager.isConnected());
-                } catch (BassException ex) {
+                } catch (Exception ex) {
                     logger.error("Failed to open recording device '" + recordingDevice + "'", ex);
                     sendingHandler = null;
                     speakEnabled = false;
@@ -430,7 +434,7 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
             if (receivingHandler instanceof ListenHandler) {
                 try {
                     ((ListenHandler) receivingHandler).openPlaybackDevice(Utils.getPlaybackDeviceHandle(playbackDevice));
-                } catch (BassException ex) {
+                } catch (Exception ex) {
                     logger.error("Failed to open playback device '" + playbackDevice + "'", ex);
                     receivingHandler = null;
                     listenEnabled = false;
@@ -472,11 +476,34 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
         }
     }
 
+    public void restartAudio() {
+        for (AudioManager audioManager : getManagedAudioManagers()) {
+            updateSpeakState(audioManager, false, null);
+            updateListenState(audioManager, false, null);
+            updateSpeakState(audioManager, null, null);
+            updateListenState(audioManager, null, null);
+        }
+    }
+
     private List<AudioManager> getConnectedAudioManagers() {
         if (jda != null) {
             List<AudioManager> result = new ArrayList<>();
             for (AudioManager audioManager : jda.getAudioManagers()) {
                 if (audioManager.isConnected()) {
+                    result.add(audioManager);
+                }
+            }
+            return result;
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    private List<AudioManager> getManagedAudioManagers() {
+        if (jda != null) {
+            List<AudioManager> result = new ArrayList<>();
+            for (AudioManager audioManager : jda.getAudioManagers()) {
+                if (audioManager.isConnected() || audioManager.getSendingHandler() != null || audioManager.getReceivingHandler() != null) {
                     result.add(audioManager);
                 }
             }

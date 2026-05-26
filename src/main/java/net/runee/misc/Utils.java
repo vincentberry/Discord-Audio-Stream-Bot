@@ -126,11 +126,11 @@ public final class Utils {
 
     public static BufferedImage downloadImage(String urlStr) {
         try {
-            final URL url = new URL(urlStr);
+            final URL url = URI.create(urlStr).toURL();
             final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.31 (KHTML, like Gecko) Chrome/26.0.1410.65 Safari/537.31");
             return ImageIO.read(conn.getInputStream());
-        } catch (IOException ex) {
+        } catch (IOException | IllegalArgumentException ex) {
             logger.warn("Failed to download image", ex);
             return null;
         }

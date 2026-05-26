@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.security.auth.login.LoginException;
 import javax.swing.*;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +46,11 @@ public class HomePanel extends JPanel implements EventListener {
         loginLabel = new JLabel();
         loginLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-        loginButton = new JButton("", Utils.getIcon("icomoon/32px/183-switch.png", 32, true));
+        loginButton = new JButton("Connect", Utils.getIcon("icomoon/32px/183-switch.png", 32, true));
+        loginButton.setFocusPainted(false);
+        loginButton.setHorizontalTextPosition(SwingConstants.RIGHT);
+        loginButton.setIconTextGap(10);
+        loginButton.setPreferredSize(new Dimension(170, 58));
         loginButton.addActionListener(e -> {
             loginButtonPressed(0);
         });
@@ -74,21 +79,24 @@ public class HomePanel extends JPanel implements EventListener {
     }
 
     private JPanel buildCenterPanel() {
-        JPanel result = new JPanel();
-        result.setLayout(null);
-        result.setBackground(Utils.colorBlack);
-        result.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Utils.colorYellow, 2), BorderFactory.createEmptyBorder(5, 5, 5, 5)));
-        result.setSize(256, 256);
-        result.setMinimumSize(result.getSize());
-        result.setPreferredSize(result.getSize());
-        result.setMaximumSize(result.getSize());
+        JPanel result = new JPanel(new GridBagLayout());
+        result.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Connection"),
+                BorderFactory.createEmptyBorder(18, 18, 18, 18)
+        ));
+        result.setPreferredSize(new Dimension(360, 220));
 
-        loginButton.setSize(96, 96);
-        loginButton.setLocation(result.getWidth() / 2 - loginButton.getWidth() / 2, result.getHeight() / 2 - loginButton.getHeight() / 2);
-        result.add(loginButton);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(0, 0, 18, 0);
+        result.add(loginLabel, gbc);
 
-        loginLabel.setSize(result.getWidth(), loginButton.getY());
-        result.add(loginLabel);
+        gbc.gridy++;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        result.add(loginButton, gbc);
 
         return result;
     }
@@ -160,8 +168,14 @@ public class HomePanel extends JPanel implements EventListener {
         }
         switch (status) {
             case CONNECTED:
+                loginButton.setText("Disconnect");
+                break;
+            case SHUTDOWN:
+            case FAILED_TO_LOGIN:
+                loginButton.setText("Connect");
                 break;
             default:
+                loginButton.setText("Please wait");
                 updatePingLabel();
                 break;
         }
@@ -203,7 +217,7 @@ public class HomePanel extends JPanel implements EventListener {
         for (Map.Entry<Guild, Long> entry : audioPings.entrySet()) {
             lines.add("Audio (" + entry.getKey().getName() + "): " + formatPing(entry.getValue()));
         }
-        pingLabel.setText("<html>" + String.join("<br>", lines) + "</html > ");
+        pingLabel.setText("<html>" + String.join("<br>", lines) + "</html>");
     }
 
     private static String formatPing(Long ping) {

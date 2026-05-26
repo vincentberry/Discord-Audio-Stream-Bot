@@ -14,22 +14,28 @@ import net.runee.gui.listitems.RecordingDeviceItem;
 import net.runee.model.Config;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.Objects;
 
 public class SettingsPanel extends JPanel {
     // general
-    private JTextField botToken;
+    private JPasswordField botToken;
     private JCheckBox autoLogin;
 
     // audio
     private JButton speakEnabled;
     private JButton listenEnabled;
     private JList<RecordingDeviceItem> recordingDevices;
+    private JScrollPane recordingDevicesScroll;
     private JList<PlaybackDeviceItem> playbackDevices;
+    private JScrollPane playbackDevicesScroll;
+    private JButton refreshDevices;
+    private JButton restartAudio;
     private JCheckBox speakThresholdEnabled;
     private JSlider speakThreshold;
+    private boolean loadingConfig;
 
     public SettingsPanel() {
         initComponents();
@@ -41,13 +47,16 @@ public class SettingsPanel extends JPanel {
         final DiscordAudioStreamBot bot = DiscordAudioStreamBot.getInstance();
 
         // general
-        botToken = new JTextField();
+        botToken = new JPasswordField();
+        botToken.setEchoChar('\u2022');
+        botToken.setToolTipText("Bot token");
         Utils.addChangeListener(botToken, e -> {
-            DiscordAudioStreamBot.getConfig().botToken = Utils.emptyStringToNull(((JTextField) e.getSource()).getText());
+            DiscordAudioStreamBot.getConfig().botToken = Utils.emptyStringToNull(new String(((JPasswordField) e.getSource()).getPassword()));
             updateAutoLoginEnabled();
             saveConfig();
         });
         autoLogin = new JCheckBox();
+        autoLogin.setToolTipText("Login automatically when the application opens");
         autoLogin.addActionListener(e -> {
             final Config cfg = DiscordAudioStreamBot.getConfig();
             cfg.autoLogin = !cfg.isAutoLogin();
@@ -56,6 +65,7 @@ public class SettingsPanel extends JPanel {
 
         // audio
         speakEnabled = new JButton();
+        speakEnabled.setToolTipText("Mute or unmute the bot microphone");
         speakEnabled.addActionListener(e -> {
             final Config cfg = DiscordAudioStreamBot.getConfig();
             cfg.speakEnabled = !cfg.getSpeakEnabled();
@@ -64,6 +74,7 @@ public class SettingsPanel extends JPanel {
             saveConfig();
         });
         listenEnabled = new JButton();
+        listenEnabled.setToolTipText("Deafen or undeafen the bot output");
         listenEnabled.addActionListener(e -> {
             final Config cfg = DiscordAudioStreamBot.getConfig();
             cfg.listenEnabled = !cfg.getListenEnabled();
@@ -74,8 +85,9 @@ public class SettingsPanel extends JPanel {
         recordingDevices = new JList<>();
         recordingDevices.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         recordingDevices.setCellRenderer(new RecordingDeviceListCellRenderer());
+        recordingDevices.setVisibleRowCount(6);
         recordingDevices.addListSelectionListener(e -> {
-            if (recordingDevices.getSelectedIndex() >= 0) {
+            if (!loadingConfig && !e.getValueIsAdjusting() && recordingDevices.getSelectedIndex() >= 0) {
                 RecordingDeviceItem value = recordingDevices.getSelectedValue();
                 String recordingDevice = value != null ? value.getName() : null;
                 bot.setRecordingDevice(recordingDevice);
@@ -83,17 +95,30 @@ public class SettingsPanel extends JPanel {
                 saveConfig();
             }
         });
+        recordingDevicesScroll = new JScrollPane(recordingDevices);
+        recordingDevicesScroll.setPreferredSize(new Dimension(240, 120));
         playbackDevices = new JList<>();
         playbackDevices.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         playbackDevices.setCellRenderer(new PlaybackDeviceListCellRenderer());
+        playbackDevices.setVisibleRowCount(6);
         playbackDevices.addListSelectionListener(e -> {
-            if (playbackDevices.getSelectedIndex() >= 0) {
+            if (!loadingConfig && !e.getValueIsAdjusting() && playbackDevices.getSelectedIndex() >= 0) {
                 PlaybackDeviceItem value = playbackDevices.getSelectedValue();
                 String playbackDevice = value != null ? value.getName() : null;
                 bot.setPlaybackDevice(playbackDevice);
                 DiscordAudioStreamBot.getConfig().playbackDevice = playbackDevice;
                 saveConfig();
             }
+        });
+        playbackDevicesScroll = new JScrollPane(playbackDevices);
+        playbackDevicesScroll.setPreferredSize(new Dimension(240, 120));
+        refreshDevices = new JButton("Refresh devices", Utils.getIcon("icomoon/32px/303-loop2.png", 16, true));
+        refreshDevices.addActionListener(e -> reloadAudioDevices());
+        restartAudio = new JButton("Restart audio", Utils.getIcon("icomoon/32px/280-stop.png", 16, true));
+        restartAudio.setEnabled(false);
+        restartAudio.addActionListener(e -> {
+            bot.restartAudio();
+            JOptionPane.showMessageDialog(this, "Audio has been restarted.", "Audio", JOptionPane.INFORMATION_MESSAGE);
         });
         speakThresholdEnabled = new JCheckBox();
         speakThresholdEnabled.addActionListener(e -> {
@@ -109,11 +134,13 @@ public class SettingsPanel extends JPanel {
             if (!speakThreshold.getValueIsAdjusting()) {
                 final Config cfg = DiscordAudioStreamBot.getConfig();
                 cfg.speakThreshold = speakThreshold.getValue() * (1d/100d);
+                saveConfig();
             }
         });
     }
 
     private void loadConfig() {
+        loadingConfig = true;
         final Config cfg = DiscordAudioStreamBot.getConfig();
 
         // general
@@ -126,6 +153,17 @@ public class SettingsPanel extends JPanel {
         updateSpeakEnabled();
         listenEnabled.setSelected(cfg.getListenEnabled());
         updateListenEnabled();
+        reloadAudioDevices();
+        speakThresholdEnabled.setSelected(cfg.getSpeakThresholdEnabled());
+        speakThreshold.setValue((int) (cfg.getSpeakThreshold() * 100));
+        updateSpeakThresholdEnabled();
+        loadingConfig = false;
+    }
+
+    private void reloadAudioDevices() {
+        final Config cfg = DiscordAudioStreamBot.getConfig();
+        boolean wasLoading = loadingConfig;
+        loadingConfig = true;
         {
             DefaultListModel<RecordingDeviceItem> model = new DefaultListModel<>();
             //model.addElement(null);
@@ -162,9 +200,7 @@ public class SettingsPanel extends JPanel {
                 }
             }
         }
-        speakThresholdEnabled.setSelected(cfg.getSpeakThresholdEnabled());
-        speakThreshold.setValue((int) (cfg.getSpeakThreshold() * 100));
-        updateSpeakThresholdEnabled();
+        loadingConfig = wasLoading;
     }
 
     private void saveConfig() {
@@ -194,7 +230,7 @@ public class SettingsPanel extends JPanel {
                         .add("c:p")
                         .gapUnrelated().add("c:p")
                         .add("c:p")
-                        .add("t:p")
+                        .add("f:80dlu:g")
                         .add("c:p", 4)
                         .build()
                 )
@@ -212,9 +248,10 @@ public class SettingsPanel extends JPanel {
                 /**/.add("Deafen/Undeafen").xy(5, row)
                 /**/.add(listenEnabled).xy(7, row)
                 .add("Input device").xy(1, row += 2)
-                /**/.add(recordingDevices).xy(3, row)
+                /**/.add(recordingDevicesScroll).xy(3, row)
                 /**/.add("Output device").xy(5, row)
-                /**/.add(playbackDevices).xy(7, row)
+                /**/.add(playbackDevicesScroll).xy(7, row)
+                .add(Utils.buildFlowPanel(refreshDevices, restartAudio)).xyw(3, row += 2, 5)
                 .add("Voice activity").xy(1, row += 2)
                 /**/.add(speakThresholdEnabled).xy(3, row)
                 .add("Speak threshold").xy(1, row += 2)
@@ -232,6 +269,7 @@ public class SettingsPanel extends JPanel {
                 botToken.setEnabled(false);
                 break;
         }
+        restartAudio.setEnabled(status == JDA.Status.CONNECTED);
     }
 
     private void updateAutoLoginEnabled() {

@@ -1,8 +1,6 @@
 package net.runee;
 
 import jouvieje.bass.Bass;
-import jouvieje.bass.defines.BASS_ACTIVE;
-import jouvieje.bass.defines.BASS_ERROR;
 import jouvieje.bass.defines.BASS_RECORD;
 import jouvieje.bass.defines.BASS_STREAM;
 import jouvieje.bass.structures.HRECORD;
@@ -20,7 +18,10 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static jouvieje.bass.defines.BASS_ACTIVE.*;
 import static jouvieje.bass.defines.BASS_ERROR.BASS_ERROR_HANDLE;
@@ -29,143 +30,199 @@ public class SpeakHandler implements AudioSendHandler, Closeable {
     private static final Logger logger = LoggerFactory.getLogger(SpeakHandler.class);
     public static final int FRAME_MILLIS = 20;
     public static final int MAX_LAG = 200;
-    private static List<SpeakHandler> activeHandlers = new ArrayList<>();
+    private static final Object activeHandlersLock = new Object();
+    private static final List<SpeakHandler> activeHandlers = new ArrayList<>();
+    private static final Map<Integer, RecordingResource> recordingResources = new HashMap<>();
+
+    private static class RecordingResource {
+        private final int device;
+        private final HRECORD stream;
+        private int refCount;
+
+        private RecordingResource(int device, HRECORD stream) {
+            this.device = device;
+            this.stream = stream;
+        }
+    }
 
     private final Object memoryQueueLock = new Object();
     private int recordingDevice;
+    private RecordingResource recordingResource;
     private HRECORD recordingStream;
     private MemoryQueue memoryQueue;
     private byte[] buffer;
+    private volatile boolean closed;
+    private volatile boolean playing;
 
     public SpeakHandler() {
         this.recordingDevice = -1;
+        this.closed = true;
         this.buffer = new byte[INPUT_FORMAT.getChannels() * (int) (INPUT_FORMAT.getSampleRate() * (FRAME_MILLIS / 1000f)) * (INPUT_FORMAT.getSampleSizeInBits() / 8)];
     }
 
     public void openRecordingDevice(int recordingDevice, boolean setPlaying) throws BassException {
         Utils.closeQuiet(this);
 
-        this.recordingDevice = recordingDevice;
-        memoryQueue = new MemoryQueue();
+        synchronized (activeHandlersLock) {
+            this.recordingDevice = recordingDevice;
+            this.memoryQueue = new MemoryQueue();
 
-        HRECORD recordingStream = null;
-        for (SpeakHandler handler : activeHandlers) {
-            if (handler.recordingDevice == recordingDevice) {
-                recordingStream = handler.recordingStream;
-                break;
-            }
-        }
-
-        if (recordingStream != null) {
-            this.recordingStream = recordingStream;
-        } else {
-            try {
-                if (!Bass.BASS_RecordInit(recordingDevice)) {
+            RecordingResource resource = recordingResources.get(recordingDevice);
+            if (resource == null) {
+                try {
+                    if (!Bass.BASS_RecordInit(recordingDevice)) {
+                        Utils.checkBassError();
+                    }
+                    int flags = BASS_STREAM.BASS_STREAM_AUTOFREE | BASS_RECORD.BASS_RECORD_PAUSE;
+                    HRECORD stream = Bass.BASS_RecordStart((int) INPUT_FORMAT.getSampleRate(), INPUT_FORMAT.getChannels(), flags, SpeakHandler::RECORDPROC, null);
                     Utils.checkBassError();
-                }
-                int flags = BASS_STREAM.BASS_STREAM_AUTOFREE;
-                if(!setPlaying) {
-                    flags |= BASS_RECORD.BASS_RECORD_PAUSE;
-                }
-                this.recordingStream = Bass.BASS_RecordStart((int) INPUT_FORMAT.getSampleRate(), INPUT_FORMAT.getChannels(), flags, SpeakHandler::RECORDPROC, null);
-                Utils.checkBassError();
-            } catch (BassException ex) {
-                Utils.closeQuiet(this);
-                throw ex;
-            }
-        }
 
-        activeHandlers.add(this);
+                    resource = new RecordingResource(recordingDevice, stream);
+                    recordingResources.put(recordingDevice, resource);
+                } catch (BassException ex) {
+                    memoryQueue = null;
+                    this.recordingDevice = -1;
+                    Bass.BASS_RecordSetDevice(recordingDevice);
+                    Bass.BASS_RecordFree();
+                    throw ex;
+                }
+            }
+
+            resource.refCount++;
+            this.recordingResource = resource;
+            this.recordingStream = resource.stream;
+            this.closed = false;
+            this.playing = setPlaying;
+            activeHandlers.add(this);
+            updateSharedPlayingState(resource);
+        }
     }
 
     public void setPlaying(boolean playing) throws BassException {
-        if(recordingStream == null) {
-            throw new IllegalStateException("No open stream, call openRecordingDevice first");
-        }
-        switch (Bass.BASS_ChannelIsActive(this.recordingStream.asInt())) {
-            case BASS_ACTIVE_PLAYING:
-            case BASS_ACTIVE_STALLED:
-                if(!playing) {
-                    Bass.BASS_ChannelPause(this.recordingStream.asInt());
-                }
-                break;
-            case BASS_ACTIVE_PAUSED:
-            case BASS_ACTIVE_STOPPED:
-                if(playing) {
-                    Bass.BASS_ChannelPlay(this.recordingStream.asInt(), false);
-                }
-                break;
-            default:
-                throw new IndexOutOfBoundsException();
-        }
         try {
-            Utils.checkBassError();
-        } catch(BassException ex) {
+            synchronized (activeHandlersLock) {
+                if (recordingResource == null || recordingStream == null || closed) {
+                    return;
+                }
+                this.playing = playing;
+                updateSharedPlayingState(recordingResource);
+            }
+        } catch (BassException ex) {
             if(ex.getError() == BASS_ERROR_HANDLE) {
-                // TODO invalid handle:
-                // not sure why, but after moving around guilds/channels a few times (with follow-audio on), the stream handle randomly becomes invalid (probably a synchronization issue)
-                // as a workaround, let's open a new stream
                 logger.warn("Workaround: Restarting recording stream", ex);
                 openRecordingDevice(recordingDevice, playing);
+            } else {
+                throw ex;
             }
         }
     }
 
     public float getLag() {
-        return (memoryQueue.size() / (float) buffer.length) * FRAME_MILLIS;
+        synchronized (memoryQueueLock) {
+            return memoryQueue != null ? (memoryQueue.size() / (float) buffer.length) * FRAME_MILLIS : 0;
+        }
     }
 
     private static boolean RECORDPROC(HRECORD handle, ByteBuffer buffer, int length, Pointer user) {
-        Config cfg = DiscordAudioStreamBot.getConfig();
-        List<SpeakHandler> handlers = getActiveHandlers(handle);
-        byte[] sampleBuffer = new byte[2];
-        int numSamplesToWrite = length / sampleBuffer.length;
-        for (int s = 0; s < numSamplesToWrite; s++) {
-            short sample = buffer.getShort();
-            if(cfg.getSpeakThresholdEnabled() && Math.abs((double)sample) <= cfg.getSpeakThreshold() * Short.MAX_VALUE) {
-                sample = 0;
-            }
-            sampleBuffer[0] = (byte) ((sample >> 8) & 0xff);
-            sampleBuffer[1] = (byte) (sample & 0xff);
-            for (SpeakHandler handler : handlers) {
-                synchronized (handler.memoryQueueLock) {
-                    handler.memoryQueue.enqueue(sampleBuffer, 0, sampleBuffer.length);
+        try {
+            Config cfg = DiscordAudioStreamBot.getConfig();
+            List<SpeakHandler> handlers = getActiveHandlers(handle);
+            byte[] sampleBuffer = new byte[2];
+            int numSamplesToWrite = length / sampleBuffer.length;
+            for (int s = 0; s < numSamplesToWrite; s++) {
+                short sample = buffer.getShort();
+                if(cfg.getSpeakThresholdEnabled() && Math.abs((double)sample) <= cfg.getSpeakThreshold() * Short.MAX_VALUE) {
+                    sample = 0;
+                }
+                sampleBuffer[0] = (byte) ((sample >> 8) & 0xff);
+                sampleBuffer[1] = (byte) (sample & 0xff);
+                for (SpeakHandler handler : handlers) {
+                    synchronized (handler.memoryQueueLock) {
+                        if (!handler.closed && handler.memoryQueue != null) {
+                            handler.memoryQueue.enqueue(sampleBuffer, 0, sampleBuffer.length);
+                        }
+                    }
                 }
             }
+        } catch (Throwable ex) {
+            logger.error("Recording callback failed", ex);
         }
         return true;
     }
 
     private static List<SpeakHandler> getActiveHandlers(HRECORD handle) {
         List<SpeakHandler> matchingHandlers = new ArrayList<>();
-        for (SpeakHandler handler : new ArrayList<>(activeHandlers)) {
-            if (handle.equals(handler.recordingStream)) {
-                matchingHandlers.add(handler);
+        synchronized (activeHandlersLock) {
+            for (SpeakHandler handler : activeHandlers) {
+                if (!handler.closed && handle.equals(handler.recordingStream)) {
+                    matchingHandlers.add(handler);
+                }
             }
         }
         return matchingHandlers;
     }
 
+    private static void updateSharedPlayingState(RecordingResource resource) throws BassException {
+        boolean shouldPlay = false;
+        for (SpeakHandler handler : activeHandlers) {
+            if (!handler.closed && handler.recordingResource == resource && handler.playing) {
+                shouldPlay = true;
+                break;
+            }
+        }
+
+        switch (Bass.BASS_ChannelIsActive(resource.stream.asInt())) {
+            case BASS_ACTIVE_PLAYING:
+            case BASS_ACTIVE_STALLED:
+                if (!shouldPlay) {
+                    Bass.BASS_ChannelPause(resource.stream.asInt());
+                }
+                break;
+            case BASS_ACTIVE_PAUSED:
+            case BASS_ACTIVE_STOPPED:
+                if (shouldPlay) {
+                    Bass.BASS_ChannelPlay(resource.stream.asInt(), false);
+                }
+                break;
+            default:
+                break;
+        }
+        Utils.checkBassError();
+    }
+
     @Override
     public boolean canProvide() {
+        synchronized (memoryQueueLock) {
+            if (closed || memoryQueue == null) {
+                return false;
+            }
+        }
         float lag = getLag();
         if (lag >= MAX_LAG) {
             synchronized (memoryQueueLock) {
-                memoryQueue.clear();
+                if (memoryQueue != null) {
+                    memoryQueue.clear();
+                }
             }
             logger.warn("SpeakHandler is " + (int)lag + " ms behind! Clearing queue...");
         }
-        return memoryQueue.size() >= buffer.length;
+        synchronized (memoryQueueLock) {
+            return memoryQueue != null && memoryQueue.size() >= buffer.length;
+        }
     }
 
     @Nullable
     @Override
     public ByteBuffer provide20MsAudio() {
         int numBytesRead;
+        Arrays.fill(buffer, (byte) 0);
         synchronized (memoryQueueLock) {
+            if (closed || memoryQueue == null) {
+                return null;
+            }
             numBytesRead = memoryQueue.dequeue(buffer, 0, buffer.length);
         }
-        return ByteBuffer.wrap(buffer, 0, numBytesRead);
+        return ByteBuffer.wrap(buffer, 0, buffer.length);
     }
 
     @Override
@@ -175,20 +232,39 @@ public class SpeakHandler implements AudioSendHandler, Closeable {
 
     @Override
     public void close() throws IOException {
-        activeHandlers.remove(this);
-        if (recordingStream != null) {
-            Bass.BASS_ChannelStop(recordingStream.asInt());
+        RecordingResource resourceToClose = null;
+        synchronized (activeHandlersLock) {
+            if (closed && recordingResource == null) {
+                return;
+            }
+            activeHandlers.remove(this);
+            RecordingResource resource = recordingResource;
+            if (resource != null) {
+                resource.refCount--;
+                if (resource.refCount <= 0) {
+                    recordingResources.remove(resource.device);
+                    resourceToClose = resource;
+                } else {
+                    try {
+                        updateSharedPlayingState(resource);
+                    } catch (BassException ex) {
+                        logger.warn("Failed to update shared recording state while closing", ex);
+                    }
+                }
+            }
+            closed = true;
+            playing = false;
+            memoryQueue = null;
+            recordingStream = null;
+            recordingResource = null;
+            recordingDevice = -1;
         }
-        if (recordingDevice >= 0) {
-            Bass.BASS_RecordSetDevice(recordingDevice);
+
+        if (resourceToClose != null) {
+            Bass.BASS_ChannelStop(resourceToClose.stream.asInt());
+            Bass.BASS_RecordSetDevice(resourceToClose.device);
             Bass.BASS_RecordFree();
+            Utils.checkBassError();
         }
-        memoryQueue = null;
-        recordingStream = null;
-        // TODO invalid handle:
-        // not sure why, but after moving around guilds/channels a few times (with follow-audio on), the stream handle becomes invalid  (probably a synchronization issue)
-        // as a workaround, keep the recording device last used
-        //recordingDevice = -1;
-        Utils.checkBassError();
     }
 }

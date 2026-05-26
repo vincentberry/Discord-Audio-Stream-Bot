@@ -16,8 +16,9 @@
 * Copy the bot token
 * Enable the "SERVER MEMBERS INTENT" (required to check if a user issuing a command has sufficient permissions)
 #### Part 2 - Bot program
-* Check that a Java Runtime Environment, version 17 (JRE/JDK 17) or higher with an architecture matching your computer is installed and that the folder containing java.exe & javaw.exe is added to the PATH system environment variable - otherwise it will crash in the next step!
-* Run the bot program using "**run win.bat**"<br>**Note: This step is only valid for Windows.** *If you intend to run it on mac or linux, I would appreciate your help in making launch scripts or submitting explanations for this document!*
+* Download or build the portable package for your operating system. The portable package contains its own Java runtime, so users do not need to install Java 17 manually.
+* To build it from source, run `gradle portableZip`. The package is created in `build/distributions/`.
+* Extract the zip and run `run.bat` on Windows. If you need logs in a console, run `run-console.bat` instead.
 * In the settings tab, paste your bot token and hit return
 * In the home tab, click the big on/off button to log in to the bot user with the token
 * In the maintenance tab, invite/add the bot to a guild/server, if necessary

@@ -70,8 +70,11 @@ public class MainFrame extends JFrame implements Runnable {
 
     private static void uncaughtException(Thread t, Throwable e) {
         logger.error("Uncaught exception in thread " + t.getName(), e);
-        JOptionPane.showMessageDialog(instance, "A fatal error occurred and the application will be closed.\nThe logs can be found at " + logFile.getAbsolutePath(), "Error", JOptionPane.ERROR_MESSAGE);
-        System.exit(-1);
+        if (instance == null || "main".equals(t.getName())) {
+            JOptionPane.showMessageDialog(instance, "A fatal error occurred and the application will be closed.\nThe logs can be found at " + logFile.getAbsolutePath(), "Error", JOptionPane.ERROR_MESSAGE);
+            System.exit(-1);
+        }
+        EventQueue.invokeLater(() -> JOptionPane.showMessageDialog(instance, "An unexpected error occurred.\nThe bot will keep running where possible.\nThe logs can be found at " + logFile.getAbsolutePath(), "Error", JOptionPane.ERROR_MESSAGE));
     }
 
     private static void onRuntimeShutdown() {

@@ -8,11 +8,13 @@ plugins {
 }
 
 wrapper {
-    gradleVersion = '8.12'
+    gradleVersion = '8.14.3'
 }
 
 group = 'net.runee'
 version = '1.0-SNAPSHOT' // I prefer date based versioning here, leave it at default
+
+def appDisplayName = 'Discord Audio Stream Bot'
 
 application {
     mainClass = 'net.runee.gui.MainFrame'
@@ -26,7 +28,7 @@ java {
 repositories {
     gradlePluginPortal()
     mavenCentral()
-    maven { url 'https://m2.dv8tion.net/releases' }
+    maven { url = uri('https://m2.dv8tion.net/releases') }
 }
 
 dependencies {
@@ -73,9 +75,141 @@ tasks.named('test', Test).configure {
 
 // remove version details from output jar
 shadowJar {
-    archiveBaseName.set('Discord Audio Stream Bot')
+    archiveBaseName.set(appDisplayName)
     archiveClassifier.set('')
     archiveVersion.set('')
+}
+
+def currentOsClassifier = {
+    String arch = System.getProperty('os.arch', '').toLowerCase(Locale.ROOT)
+    String archClassifier = arch.contains('64') ? 'x64' : 'x86'
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        return "windows-${archClassifier}"
+    } else if (Os.isFamily(Os.FAMILY_MAC)) {
+        return "mac-${archClassifier}"
+    } else if (Os.isFamily(Os.FAMILY_UNIX)) {
+        return "linux-${archClassifier}"
+    }
+    return "unknown-${archClassifier}"
+}()
+
+def jlinkExecutable = providers.provider {
+    String executableName = Os.isFamily(Os.FAMILY_WINDOWS) ? 'jlink.exe' : 'jlink'
+    File javaHome = new File(System.getProperty('java.home'))
+    List<File> candidates = [new File(javaHome, "bin/${executableName}")]
+    if (javaHome.name.equalsIgnoreCase('jre') && javaHome.parentFile != null) {
+        candidates.add(new File(javaHome.parentFile, "bin/${executableName}"))
+    }
+    File executable = candidates.find { it.isFile() }
+    if (executable == null) {
+        throw new GradleException("Unable to find ${executableName}. Build the portable package with a JDK, not a JRE.")
+    }
+    executable.absolutePath
+}
+
+def jdkJmodsDir = providers.provider {
+    File javaHome = new File(System.getProperty('java.home'))
+    List<File> candidates = [new File(javaHome, 'jmods')]
+    if (javaHome.name.equalsIgnoreCase('jre') && javaHome.parentFile != null) {
+        candidates.add(new File(javaHome.parentFile, 'jmods'))
+    }
+    File jmods = candidates.find { it.isDirectory() }
+    if (jmods == null) {
+        throw new GradleException('Unable to find the JDK jmods directory. Build the portable package with a full JDK.')
+    }
+    jmods.absolutePath
+}
+
+def portableRuntimeDir = layout.buildDirectory.dir('portable-runtime')
+def portableAppDir = layout.buildDirectory.dir("portable/${appDisplayName}")
+
+tasks.register('portableRuntime', Exec) {
+    group = 'distribution'
+    description = 'Builds a trimmed Java runtime used by the portable application package.'
+    outputs.dir(portableRuntimeDir)
+    doFirst {
+        delete(portableRuntimeDir.get().asFile)
+    }
+    executable = jlinkExecutable.get()
+    args '--module-path', jdkJmodsDir.get(),
+            '--add-modules', 'ALL-MODULE-PATH',
+            '--strip-debug',
+            '--no-header-files',
+            '--no-man-pages',
+            '--output', portableRuntimeDir.get().asFile.absolutePath
+}
+
+tasks.register('portableDist', Copy) {
+    group = 'distribution'
+    description = 'Creates a portable app folder with app.jar, BASS natives, launcher scripts, and a bundled Java runtime.'
+    dependsOn shadowJar, portableRuntime
+    into portableAppDir
+    doFirst {
+        delete(portableAppDir.get().asFile)
+    }
+    from(tasks.named('shadowJar').flatMap { it.archiveFile }) {
+        rename { 'app.jar' }
+    }
+    from('natives') {
+        into 'natives'
+    }
+    from(portableRuntimeDir) {
+        into 'runtime'
+    }
+    doLast {
+        File outDir = portableAppDir.get().asFile
+        File runBat = new File(outDir, 'run.bat')
+        runBat.text = '''@echo off
+setlocal
+cd /d "%~dp0"
+set "APP_DIR=%~dp0"
+set "JAVA_EXE=%APP_DIR%runtime\\bin\\javaw.exe"
+if not exist "%JAVA_EXE%" set "JAVA_EXE=%APP_DIR%runtime\\bin\\java.exe"
+set "BASS_NATIVE_DIR=%APP_DIR%natives\\win64"
+if /i "%PROCESSOR_ARCHITECTURE%"=="x86" if "%PROCESSOR_ARCHITEW6432%"=="" set "BASS_NATIVE_DIR=%APP_DIR%natives\\win32"
+start "" "%JAVA_EXE%" --add-exports=java.desktop/com.sun.java.swing.plaf.windows=ALL-UNNAMED -Djava.library.path="%BASS_NATIVE_DIR%" -jar "%APP_DIR%app.jar" %*
+'''
+        File runConsoleBat = new File(outDir, 'run-console.bat')
+        runConsoleBat.text = '''@echo off
+setlocal
+cd /d "%~dp0"
+set "APP_DIR=%~dp0"
+set "JAVA_EXE=%APP_DIR%runtime\\bin\\java.exe"
+set "BASS_NATIVE_DIR=%APP_DIR%natives\\win64"
+if /i "%PROCESSOR_ARCHITECTURE%"=="x86" if "%PROCESSOR_ARCHITEW6432%"=="" set "BASS_NATIVE_DIR=%APP_DIR%natives\\win32"
+"%JAVA_EXE%" --add-exports=java.desktop/com.sun.java.swing.plaf.windows=ALL-UNNAMED -Djava.library.path="%BASS_NATIVE_DIR%" -jar "%APP_DIR%app.jar" %*
+pause
+'''
+        File runSh = new File(outDir, 'run.sh')
+        runSh.text = '''#!/usr/bin/env sh
+APP_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+OS_NAME=$(uname -s)
+ARCH_NAME=$(uname -m)
+NATIVE_SUBDIR=linux64
+case "$OS_NAME" in
+  Darwin*) NATIVE_SUBDIR=mac ;;
+  Linux*)
+    case "$ARCH_NAME" in
+      i386|i686) NATIVE_SUBDIR=linux32 ;;
+      *) NATIVE_SUBDIR=linux64 ;;
+    esac
+    ;;
+esac
+exec "$APP_DIR/runtime/bin/java" -Djava.library.path="$APP_DIR/natives/$NATIVE_SUBDIR" -jar "$APP_DIR/app.jar" "$@"
+'''
+        runSh.setExecutable(true, false)
+    }
+}
+
+tasks.register('portableZip', Zip) {
+    group = 'distribution'
+    description = 'Archives the portable app folder for distribution to users without requiring Java to be installed.'
+    dependsOn portableDist
+    destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+    archiveFileName.set("${appDisplayName}-portable-${currentOsClassifier}.zip")
+    from(portableAppDir) {
+        into appDisplayName
+    }
 }
 
 run {
