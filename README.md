@@ -1,76 +1,116 @@
 # Discord Audio Stream Bot
->A simple discord audio streaming bot.
 
-#### Preview: Streaming to discord ("speaking")
-![preview](https://i.imgur.com/diLmICq.png)
-1. Audio source (e.g. your voice, music from file, sound from game)
-2. Recording device (e.g. microphone, [Virtual Cable](https://www.vb-audio.com/Cable/index.htm))
-3. Discord Audio Stream Bot (this software)
-4. Discord Voice Chat (discord)
+Desktop application for streaming local audio to a Discord voice channel through a bot account.
 
+> This project is a fork/continuation of the original
+> [BinkanSalaryman/Discord-Audio-Stream-Bot](https://github.com/BinkanSalaryman/Discord-Audio-Stream-Bot).
+> The original repository no longer appears to be maintained; this version keeps the project usable with newer Java/JDA/Discord changes and adds packaging, stability, and UI improvements.
 
-## Getting started
-#### Part 1 - Bot user
-* Create a discord developer application [here](https://discordapp.com/developers/applications)
-* In the bot tab, add a bot user
-* Copy the bot token
-* Enable the "SERVER MEMBERS INTENT" (required to check if a user issuing a command has sufficient permissions)
-#### Part 2 - Bot program
-* Download the native app package for your operating system. It contains its own Java runtime, so users do not need to install Java 17 manually.
-* To build it from source, run `gradle nativeImageZip`. The package is created in `build/distributions/`.
-* Extract the zip and launch the application executable for your operating system.
-* In the settings tab, paste your bot token and hit return
-* In the home tab, click the big on/off button to log in to the bot user with the token
-* In the maintenance tab, invite/add the bot to a guild/server, if necessary
-#### Part 3 - Command introduction
-* Now you can enter commands - either by sending a direct message in a private channel to the bot user or from within a channel of a guild/server shared by you and the bot user. Start by typing a slash ("/") to get a list of available commands for all applicable bots
-* As an example, type "/about" to get a link to this repo ("/about public:True" to also show that to other users)
-* Use "/bind" to restrict command usage to one or more channels in a guild
-* Use "/autojoin" or "/follow-audio" to automate *join*ing audio channels (being a voice or stage channel)
-#### Part 4 - Test run
-* Issue the command "/join" to bring the bot user up in a voice channel
-* In the settings tab of the bot program, unmute the bot
-* Choose & select a recording device (default one being your microphone, most likely)
-* You can also use the Maintenance tab to see the connected voice channel, join/leave a voice or stage channel, and set the auto-join channel without opening Discord
-* If audio gets stuck, use the Maintenance tab's "Restart audio" button or the Discord command `/restart-audio`
-* Now it should be sending audio from the selected recording device to discord. Enjoy!
+## Features
 
+- Stream a local audio source to Discord.
+- Select a microphone or virtual audio device, such as VB-Audio Virtual Cable.
+- Desktop UI for configuring the bot token, audio devices, and voice channels.
+- Maintenance tab showing the connected voice channel, permissions, auto-join settings, and audio restart controls.
+- Discord slash commands for joining/leaving voice, auto-join, follow-audio, and restarting the audio pipeline.
+- Native Windows, Linux, and macOS builds with a bundled Java runtime.
 
-### macOS (credits to spkane, *may be outdated*)
+## Installation
 
-#### Building
+The recommended installation method is to download the latest GitHub release.
 
-* Install homebrew if you do not already have it, then:
-  * `brew install gradle`
-  * `gradle build`
-  * `cd build/distributions`
-  * `tar -xvf Discord-Audio-Stream-Bot-1.0-SNAPSHOT.tar`
+The `native-*` packages include their own Java runtime, so users do not need to install Java 17 manually.
 
-#### Usage
+1. Download the package for your operating system:
+   - `Discord Audio Stream Bot-native-windows-x64.zip`
+   - `Discord Audio Stream Bot-native-linux-x64.zip`
+   - `Discord Audio Stream Bot-native-macos-x64.zip`
+2. Extract the archive.
+3. Launch the packaged application:
+   - Windows: `Discord Audio Stream Bot.exe`
+   - Linux: launcher inside the `bin` directory
+   - macOS: `.app` application bundle
 
-* Follow the build steps above, then:
-  * `cd Discord-Audio-Stream-Bot-1.0-SNAPSHOT`
-  * `DISCORD_AUDIO_STREAM_BOT_OPTS='-Djava.library.path="/usr/lib:../../../natives/mac/" --add-exports="java.desktop/com.sun.java.swing.plaf.windows=ALL-UNNAMED"' ./bin/Discord-Audio-Stream-Bot`
+## Discord Setup
 
-* >[Loopback](https://rogueamoeba.com/loopback/) is a very good virtual audio cable application for macOS
+1. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications).
+2. In the Bot tab, create a bot and copy its token.
+3. Enable `SERVER MEMBERS INTENT`, which is required for some permission checks.
+4. Launch Discord Audio Stream Bot.
+5. In `Settings`, paste the bot token.
+6. In `Home`, connect the bot.
+7. In `Maintenance`, invite the bot to a server if needed.
 
+## Usage
 
-### Linux (CentOS 7) (credits to Johnny Primus, *may be outdated*)
+To stream audio to Discord:
 
-#### Building
-* Install java and dependencies
-* `sudo yum install java-11-openjdk-devel.x86_64 java-11-openjdk-headless.x86_64 git-all zip unzip bzip2 gzip`
-* Install sdkman (https://sdkman.io/)
-* `curl -s "https://get.sdkman.io" | bash`
-* Install gradle 8.5 (https://gradle.org/install/)
-* `sdk install gradle 8.5`
-* `build`
-* `gradle build`
+1. Connect the bot from the `Home` tab.
+2. In `Settings`, unmute the bot microphone.
+3. Select the input audio device.
+4. Join a voice or stage channel with `/join` or from the `Maintenance` tab.
 
-#### Usage
-* Follow the build steps above, then:
-  * `gradle run`
+To stream audio from an application or game, use a virtual audio cable such as [VB-Audio Virtual Cable](https://www.vb-audio.com/Cable/), then select its output as the recording device in this app.
 
-#### Tools
-* >[Virtual Cable](https://www.vb-audio.com/Cable/index.htm) (A virtual audio device working as virtual audio cable - After installation, restart bot program and set the recording device in settings tab to "CABLE Output (VB-Audio Virtual Cable)". Don't forget to stream audio into the device **CABLE Input** or else you'll hear nothing)
-* >[Audio Router](https://github.com/audiorouterdev/audio-router) (To replug your favourite audio source to play into CABLE Input, if it doesn't support switching audio output)
+## Discord Commands
+
+- `/join` - Join a voice or stage channel.
+- `/leave` - Leave the current voice channel.
+- `/leave-all` - Leave all connected voice channels. Bot owner only.
+- `/autojoin` - Configure the channel to join automatically.
+- `/follow-audio` - Follow a user across voice channels.
+- `/restart-audio` - Restart the audio pipeline for the current server.
+- `/restart-audio all:true` - Restart all audio pipelines. Bot owner only.
+- `/bind` - Restrict which text channels can be used for bot commands.
+- `/status`, `/activity`, `/stage`, `/about`, `/invite`, `/stop` - General bot management commands.
+
+## Audio Troubleshooting
+
+If audio becomes unstable or gets stuck:
+
+1. Use the `Restart audio` button in the `Maintenance` tab.
+2. Or run the Discord command `/restart-audio`.
+3. Check that the correct input device is selected in `Settings`.
+4. If you are using a virtual audio cable, make sure the source application is sending audio to the cable input.
+
+## Building From Source
+
+A full JDK is required to create native packages because the build uses `jpackage`.
+
+On Windows:
+
+```powershell
+.\gradlew.bat test nativeImageZip
+```
+
+On Linux or macOS:
+
+```bash
+./gradlew test nativeImageZip
+```
+
+Generated archives are written to:
+
+```text
+build/distributions/
+```
+
+## Automated Releases
+
+The GitHub Actions workflow builds native Windows, Linux, and macOS packages when a Git tag is pushed.
+
+Example:
+
+```bash
+git tag v1.0.2
+git push origin v1.0.2
+```
+
+The GitHub release is created automatically and the native zip files are uploaded to it.
+
+## Credits
+
+Original project:
+[BinkanSalaryman/Discord-Audio-Stream-Bot](https://github.com/BinkanSalaryman/Discord-Audio-Stream-Bot)
+
+This repository is an unofficial continuation intended to keep the application usable with current Java, JDA, and Discord behavior.
