@@ -10,8 +10,29 @@ permissions:
   contents: write
 
 jobs:
+  create-release:
+    name: Create release
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+
+    steps:
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" \
+              --title "Discord Audio Stream Bot $GITHUB_REF_NAME"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "Discord Audio Stream Bot $GITHUB_REF_NAME" \
+              --generate-notes
+          fi
+
   portable:
     name: Build ${{ matrix.name }} native app
+    needs: create-release
+    if: always() && (github.ref_type != 'tag' || needs.create-release.result == 'success')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -19,60 +40,104 @@ jobs:
         include:
           - name: Windows
             os: windows-latest
-            artifact-name: discord-audio-stream-bot-windows-native
           - name: Linux
             os: ubuntu-latest
-            artifact-name: discord-audio-stream-bot-linux-native
           - name: macOS
             os: macos-15-intel
-            artifact-name: discord-audio-stream-bot-macos-native
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          git -c http.extraheader="AUTHORIZATION: bearer $GITHUB_TOKEN" fetch --depth=1 origin "$GITHUB_REF"
+          git checkout --force FETCH_HEAD
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
+      - name: Use preinstalled Java 17 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $javaHome = $env:JAVA_HOME_17_X64
+          if (-not $javaHome -or -not (Test-Path $javaHome)) {
+            throw "JAVA_HOME_17_X64 is not available on this runner."
+          }
+          "JAVA_HOME=$javaHome" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          (Join-Path $javaHome 'bin') | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.14.3"
+      - name: Use preinstalled Java 17 (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          java_home="${JAVA_HOME_17_X64:-}"
+          if [ -z "$java_home" ] || [ ! -d "$java_home" ]; then
+            if command -v /usr/libexec/java_home >/dev/null 2>&1; then
+              java_home="$(/usr/libexec/java_home -v 17)"
+            fi
+          fi
+          if [ -z "$java_home" ] || [ ! -d "$java_home" ]; then
+            echo "::error::JAVA_HOME_17_X64 is not available on this runner."
+            exit 1
+          fi
+          echo "JAVA_HOME=$java_home" >> "$GITHUB_ENV"
+          echo "$java_home/bin" >> "$GITHUB_PATH"
 
-      - name: Compile and test
-        run: gradle clean test
+      - name: Show tool versions (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          java -version
+          jpackage --version
+          .\gradlew.bat --version
 
-      - name: Build native app image
-        run: gradle nativeImageZip
+      - name: Show tool versions (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          java -version
+          jpackage --version
+          ./gradlew --version
 
-      - name: Upload native app artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact-name }}
-          path: build/distributions/*native-*.zip
-          if-no-files-found: error
+      - name: Build native app image (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\gradlew.bat --no-daemon clean test nativeImageZip
 
-  release:
-    name: Create GitHub release
-    needs: portable
-    runs-on: ubuntu-latest
-    if: github.ref_type == 'tag'
+      - name: Build native app image (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: ./gradlew --no-daemon clean test nativeImageZip
 
-    steps:
-      - name: Download native apps
-        uses: actions/download-artifact@v4
-        with:
-          path: release-assets
-          merge-multiple: true
+      - name: Upload package to release (Windows)
+        if: github.ref_type == 'tag' && runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $files = Get-ChildItem -Path build/distributions -Filter '*native-*.zip'
+          if ($files.Count -eq 0) {
+            throw "No native zip was produced."
+          }
+          $ghArgs = @('release', 'upload', $env:GITHUB_REF_NAME) + @($files | ForEach-Object { $_.FullName }) + @('--clobber')
+          gh @ghArgs
 
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Discord Audio Stream Bot ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
-          make_latest: true
-          files: release-assets/*.zip
+      - name: Upload package to release (Unix)
+        if: github.ref_type == 'tag' && runner.os != 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(build/distributions/*native-*.zip)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::No native zip was produced."
+            exit 1
+          fi
+          gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber

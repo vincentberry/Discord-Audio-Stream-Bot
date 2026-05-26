@@ -1,8 +1,5 @@
 .gradle/
 .idea/
 build/
-gradle/
 app.log
 config.json
-gradlew
-gradlew.bat
