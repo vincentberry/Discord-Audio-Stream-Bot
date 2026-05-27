@@ -1,9 +1,5 @@
 package net.runee.gui;
 
-import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
-import ch.qos.logback.core.ConsoleAppender;
-import ch.qos.logback.core.FileAppender;
 import jouvieje.bass.BassInit;
 import net.dv8tion.jda.api.JDA;
 import net.runee.DiscordAudioStreamBot;
@@ -13,6 +9,7 @@ import net.runee.gui.components.SettingsPanel;
 import net.runee.misc.Utils;
 import net.runee.misc.gui.BorderPanel;
 import net.runee.model.Config;
+import net.runee.update.AutoUpdater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +28,7 @@ import java.util.Locale;
 
 public class MainFrame extends JFrame implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(MainFrame.class);
-    private static final File logFile = new File("app.log");
+    private static final File logFile = new File("logs/app.log");
     private static MainFrame instance;
 
     public static void main(String[] args) {
@@ -165,6 +162,7 @@ public class MainFrame extends JFrame implements Runnable {
             @Override
             public void windowOpened(WindowEvent e) {
                 final Config config = DiscordAudioStreamBot.getConfig();
+                AutoUpdater.checkForUpdatesInBackground(MainFrame.this);
                 if(config.botToken != null && config.isAutoLogin()) {
                     tabHome.loginButtonPressed(1);
                 }

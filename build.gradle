@@ -132,11 +132,25 @@ def jpackageExecutable = providers.provider {
     executable.absolutePath
 }
 
+def runtimeVersionTag = providers.provider {
+    (project.findProperty('appVersion') ?: System.getenv('GITHUB_REF_NAME') ?: project.version).toString()
+}
+
 def nativeAppVersion = providers.provider {
-    String rawVersion = (project.findProperty('appVersion') ?: System.getenv('GITHUB_REF_NAME') ?: project.version).toString()
+    String rawVersion = runtimeVersionTag.get()
     rawVersion = rawVersion.replaceFirst(/^v/, '')
     def matcher = rawVersion =~ /(\d+(?:\.\d+){0,3})/
     matcher.find() ? matcher.group(1) : '1.0.0'
+}
+
+tasks.withType(Jar).configureEach {
+    manifest {
+        attributes(
+                'Implementation-Title': appDisplayName,
+                'Implementation-Version': runtimeVersionTag.get(),
+                'GitHub-Repository': 'vincentberry/Discord-Audio-Stream-Bot'
+        )
+    }
 }
 
 def jdkJmodsDir = providers.provider {

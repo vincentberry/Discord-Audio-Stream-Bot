@@ -23,6 +23,7 @@ public class SettingsPanel extends JPanel {
     // general
     private JPasswordField botToken;
     private JCheckBox autoLogin;
+    private JCheckBox autoUpdate;
 
     // audio
     private JButton speakEnabled;
@@ -59,7 +60,14 @@ public class SettingsPanel extends JPanel {
         autoLogin.setToolTipText("Login automatically when the application opens");
         autoLogin.addActionListener(e -> {
             final Config cfg = DiscordAudioStreamBot.getConfig();
-            cfg.autoLogin = !cfg.isAutoLogin();
+            cfg.autoLogin = autoLogin.isSelected();
+            saveConfig();
+        });
+        autoUpdate = new JCheckBox();
+        autoUpdate.setToolTipText("Check GitHub releases and install new packaged versions automatically");
+        autoUpdate.addActionListener(e -> {
+            final Config cfg = DiscordAudioStreamBot.getConfig();
+            cfg.autoUpdate = autoUpdate.isSelected();
             saveConfig();
         });
 
@@ -146,6 +154,7 @@ public class SettingsPanel extends JPanel {
         // general
         botToken.setText(Utils.nullToEmptyString(cfg.botToken));
         autoLogin.setSelected(cfg.isAutoLogin());
+        autoUpdate.setSelected(cfg.isAutoUpdate());
         updateAutoLoginEnabled();
 
         // voice
@@ -228,6 +237,7 @@ public class SettingsPanel extends JPanel {
                         .create()
                         .add("c:p") // general
                         .add("c:p")
+                        .add("c:p")
                         .gapUnrelated().add("c:p")
                         .add("c:p")
                         .add("f:80dlu:g")
@@ -242,6 +252,8 @@ public class SettingsPanel extends JPanel {
                 /**/.add(botToken).xy(3, row)
                 /**/.add("Auto login").xy(5, row)
                 /**/.add(autoLogin).xy(7, row)
+                .add("Auto update").xy(5, row += 2)
+                /**/.add(autoUpdate).xy(7, row)
                 .addSeparator("Audio").xyw(1, row += 2, 7)
                 .add("Mute/Unmute").xy(1, row += 2)
                 /**/.add(speakEnabled).xy(3, row)

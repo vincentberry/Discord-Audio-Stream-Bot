@@ -20,6 +20,7 @@ Desktop application for streaming local audio to a Discord voice channel through
 The recommended installation method is to download the latest GitHub release.
 
 The `native-*` packages include their own Java runtime, so users do not need to install Java 17 manually.
+Packaged releases check GitHub for updates when the application starts. If a newer release is available, the app downloads the matching native package and asks to restart so the update can be installed.
 
 1. Download the package for your operating system:
    - `Discord Audio Stream Bot-native-windows-x64.zip`
@@ -73,6 +74,8 @@ If audio becomes unstable or gets stuck:
 2. Or run the Discord command `/restart-audio`.
 3. Check that the correct input device is selected in `Settings`.
 4. If you are using a virtual audio cable, make sure the source application is sending audio to the cable input.
+
+Logs are written to `logs/app.log` and are appended instead of overwritten on startup. Archived logs are rotated by date and size.
 
 ## Building From Source
 

@@ -54,7 +54,8 @@ import java.util.stream.Collectors;
 public class DiscordAudioStreamBot extends ListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(DiscordAudioStreamBot.class);
     public static final String NAME = "Discord Audio Stream Bot";
-    public static final String GITHUB_URL = "https://github.com/BinkanSalaryman/Discord-Audio-Stream-Bot";
+    public static final String GITHUB_REPOSITORY = "vincentberry/Discord-Audio-Stream-Bot";
+    public static final String GITHUB_URL = "https://github.com/" + GITHUB_REPOSITORY;
 
     private static DiscordAudioStreamBot instance;
     public static final File configPath = new File("config.json");

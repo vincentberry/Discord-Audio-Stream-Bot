@@ -2,4 +2,5 @@
 .idea/
 build/
 app.log
+logs/
 config.json
