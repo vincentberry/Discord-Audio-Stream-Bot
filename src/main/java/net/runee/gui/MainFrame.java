@@ -163,6 +163,7 @@ public class MainFrame extends JFrame implements Runnable {
 
     private static final String CARD_MAINTAIN = "maintenance";
     private static final String CARD_SETTINGS = "settings";
+    private static final String APP_ICON = "Logo.svg";
 
     private CardLayout cards;
     private JPanel content;
@@ -173,8 +174,8 @@ public class MainFrame extends JFrame implements Runnable {
 
     private MainFrame() {
         updateTitle();
-        setIconImage(Utils.getIcon("icomoon/32px/017-headphones.png", 32, true).getImage());
-        getRootPane().putClientProperty(FlatClientProperties.TITLE_BAR_SHOW_ICON, false);
+        setIconImages(Utils.getSvgIconImages(APP_ICON, 16, 24, 32, 48, 64, 128, 256));
+        getRootPane().putClientProperty(FlatClientProperties.TITLE_BAR_SHOW_ICON, true);
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
             @Override

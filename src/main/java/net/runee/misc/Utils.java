@@ -1,5 +1,6 @@
 package net.runee.misc;
 
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.jgoodies.forms.builder.FormBuilder;
 import jouvieje.bass.Bass;
 import jouvieje.bass.defines.BASS_ERROR;
@@ -274,6 +275,33 @@ public final class Utils {
             }
         }
         return useMissingIcon ? new ImageIcon(missingIcon(size)) : null;
+    }
+
+    public static ImageIcon getSvgIcon(String file, int size, boolean useMissingIcon) {
+        String path = "net/runee/resources/icons/" + file;
+        try {
+            FlatSVGIcon icon = new FlatSVGIcon(path, size, size, Utils.class.getClassLoader());
+            if (icon.hasFound()) {
+                return icon;
+            }
+        } catch (RuntimeException ex) {
+            logger.warn("Failed to get SVG icon '" + file + "'", ex);
+        }
+        return useMissingIcon ? new ImageIcon(missingIcon(size)) : null;
+    }
+
+    public static List<Image> getSvgIconImages(String file, int... sizes) {
+        List<Image> images = new ArrayList<>();
+        for (int size : sizes) {
+            ImageIcon icon = getSvgIcon(file, size, false);
+            if (icon != null) {
+                images.add(icon.getImage());
+            }
+        }
+        if (images.isEmpty() && sizes.length > 0) {
+            images.add(missingIcon(sizes[0]));
+        }
+        return images;
     }
 
     /**

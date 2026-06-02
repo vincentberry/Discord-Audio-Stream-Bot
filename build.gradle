@@ -172,6 +172,7 @@ def portableRuntimeDir = layout.buildDirectory.dir('portable-runtime')
 def portableAppDir = layout.buildDirectory.dir("portable/${appDisplayName}")
 def nativeImageInputDir = layout.buildDirectory.dir('jpackage/input')
 def nativeImageDestDir = layout.buildDirectory.dir('jpackage/image')
+def windowsAppIcon = file('src/main/resources/net/runee/resources/icons/Logo.ico')
 
 tasks.register('portableRuntime', Exec) {
     group = 'distribution'
@@ -287,6 +288,7 @@ tasks.register('nativeImage', Exec) {
     inputs.property('mainClass', application.mainClass.get())
     inputs.property('appVersion', nativeAppVersion.get())
     inputs.property('osClassifier', currentOsClassifier)
+    inputs.files(windowsAppIcon).withPropertyName('windowsAppIcon').optional()
     outputs.dir(nativeImageDestDir)
     doFirst {
         delete(nativeImageDestDir.get().asFile)
@@ -301,6 +303,9 @@ tasks.register('nativeImage', Exec) {
             '--main-class', application.mainClass.get(),
             '--runtime-image', portableRuntimeDir.get().asFile.absolutePath
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        if (windowsAppIcon.isFile()) {
+            args '--icon', windowsAppIcon.absolutePath
+        }
         args '--java-options', '--add-exports=java.desktop/com.sun.java.swing.plaf.windows=ALL-UNNAMED'
     }
 }
