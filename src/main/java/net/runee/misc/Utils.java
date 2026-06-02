@@ -39,9 +39,10 @@ public final class Utils {
     private Utils() {
     }
 
-    public static final Color colorYellow = Color.decode("#f0ff40");
-    public static final Color colorGreen = Color.decode("#80f040");
-    public static final Color colorRed = Color.decode("#f04040");
+    // status colors tuned for the light "Rail d'icones" theme (readable on #F5F6F8)
+    public static final Color colorYellow = Color.decode("#C9921A");
+    public static final Color colorGreen = Color.decode("#2E9E54");
+    public static final Color colorRed = Color.decode("#C8372D");
     public static final Color colorBlack = Color.decode("#000014");
 
     public static final String ucListItem = "・";
@@ -273,6 +274,26 @@ public final class Utils {
             }
         }
         return useMissingIcon ? new ImageIcon(missingIcon(size)) : null;
+    }
+
+    /**
+     * Recolors a (typically monochrome line) icon to the given color, preserving its alpha shape.
+     * Used to render the dark navigation rail icons in light grey / white.
+     */
+    public static ImageIcon tintIcon(ImageIcon icon, Color color) {
+        if (icon == null) {
+            return null;
+        }
+        int w = Math.max(1, icon.getIconWidth());
+        int h = Math.max(1, icon.getIconHeight());
+        BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = result.createGraphics();
+        g.drawImage(icon.getImage(), 0, 0, null);
+        g.setComposite(AlphaComposite.SrcAtop);
+        g.setColor(color);
+        g.fillRect(0, 0, w, h);
+        g.dispose();
+        return new ImageIcon(result);
     }
 
     public static BufferedImage overlayImage(BufferedImage bbase, Image bovr) {

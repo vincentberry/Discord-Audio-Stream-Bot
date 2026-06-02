@@ -1,5 +1,6 @@
 package net.runee.gui.components;
 
+import com.formdev.flatlaf.FlatClientProperties;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -57,6 +58,8 @@ public class MaintenancePanel extends JPanel implements EventListener {
     private DefaultListModel<Member> audioUsersModel;
     private DefaultListModel<MutedAudioUserItem> mutedAudioUsersModel;
     private boolean listening;
+
+    private static final Color MUTED_TEXT = new Color(0x98A0AC);
 
     public MaintenancePanel() {
         initModels();
@@ -129,14 +132,16 @@ public class MaintenancePanel extends JPanel implements EventListener {
         audioUserSearch.setToolTipText("User mention, user ID, username, or nickname");
         Utils.addChangeListener(audioUserSearch, e -> updateGuildControls());
 
-        addGuild = new JButton("Invite bot...", Utils.getIcon("icomoon/32px/116-user-plus.png", 16, true));
+        addGuild = new JButton("Invite", Utils.getIcon("icomoon/32px/116-user-plus.png", 16, true));
+        addGuild.setToolTipText("Invite the bot to a server");
         addGuild.addActionListener(e -> {
             if(!Utils.browseUrl(DiscordAudioStreamBot.getInstance().getInviteUrl())) {
                 JOptionPane.showMessageDialog(this, "Unable to open invite url in browser.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
 
-        removeGuild = new JButton("Leave guild", Utils.getIcon("icomoon/32px/117-user-minus.png", 16, true));
+        removeGuild = new JButton("Leave", Utils.getIcon("icomoon/32px/117-user-minus.png", 16, true));
+        removeGuild.setToolTipText("Leave the selected server");
         removeGuild.addActionListener(e -> {
             Guild guild = guilds.getSelectedValue();
             if (guild != null) {
@@ -144,7 +149,12 @@ public class MaintenancePanel extends JPanel implements EventListener {
             }
         });
 
-        joinChannel = new JButton("Join selected", Utils.getIcon("icomoon/32px/027-bullhorn.png", 16, true));
+        joinChannel = new JButton("Join", Utils.getIcon("icomoon/32px/027-bullhorn.png", 16, true));
+        joinChannel.setToolTipText("Join the selected channel");
+        joinChannel.putClientProperty(FlatClientProperties.STYLE,
+                "background: #3A40AC; foreground: #FFFFFF; borderColor: #3A40AC; "
+                        + "hoverBackground: #333AA0; pressedBackground: #2E348C; "
+                        + "disabledBackground: #C7C9DA; disabledForeground: #FFFFFF");
         joinChannel.addActionListener(e -> {
             AudioChannel channel = audioChannels.getSelectedValue();
             if (channel != null) {
@@ -153,7 +163,8 @@ public class MaintenancePanel extends JPanel implements EventListener {
             }
         });
 
-        leaveChannel = new JButton("Leave", Utils.getIcon("icomoon/32px/277-exit.png", 16, true));
+        leaveChannel = new JButton("Disconnect", Utils.getIcon("icomoon/32px/277-exit.png", 16, true));
+        leaveChannel.setToolTipText("Leave the connected voice channel");
         leaveChannel.addActionListener(e -> {
             Guild guild = guilds.getSelectedValue();
             if (guild != null) {
@@ -162,7 +173,8 @@ public class MaintenancePanel extends JPanel implements EventListener {
             }
         });
 
-        setAutoJoin = new JButton("Set auto-join", Utils.getIcon("icomoon/32px/273-checkmark.png", 16, true));
+        setAutoJoin = new JButton("Auto-join", Utils.getIcon("icomoon/32px/273-checkmark.png", 16, true));
+        setAutoJoin.setToolTipText("Set the selected channel as auto-join");
         setAutoJoin.addActionListener(e -> {
             Guild guild = guilds.getSelectedValue();
             AudioChannel channel = audioChannels.getSelectedValue();
@@ -174,7 +186,8 @@ public class MaintenancePanel extends JPanel implements EventListener {
             }
         });
 
-        clearAutoJoin = new JButton("Clear auto-join", Utils.getIcon("icomoon/32px/272-cross.png", 16, true));
+        clearAutoJoin = new JButton("Clear", Utils.getIcon("icomoon/32px/272-cross.png", 16, true));
+        clearAutoJoin.setToolTipText("Clear the auto-join channel");
         clearAutoJoin.addActionListener(e -> {
             Guild guild = guilds.getSelectedValue();
             if (guild != null) {
@@ -185,7 +198,8 @@ public class MaintenancePanel extends JPanel implements EventListener {
             }
         });
 
-        restartAudio = new JButton("Restart audio", Utils.getIcon("icomoon/32px/303-loop2.png", 16, true));
+        restartAudio = new JButton("Restart", Utils.getIcon("icomoon/32px/303-loop2.png", 16, true));
+        restartAudio.setToolTipText("Restart audio for this server");
         restartAudio.addActionListener(e -> {
             Guild guild = guilds.getSelectedValue();
             if (guild != null) {
@@ -195,6 +209,7 @@ public class MaintenancePanel extends JPanel implements EventListener {
         });
 
         refreshChannels = new JButton("Refresh", Utils.getIcon("icomoon/32px/135-search.png", 16, true));
+        refreshChannels.setToolTipText("Refresh channels and users");
         refreshChannels.addActionListener(e -> {
             updateAudioChannels();
             updateAudioUsers();
@@ -202,19 +217,24 @@ public class MaintenancePanel extends JPanel implements EventListener {
             updateGuildControls();
         });
 
-        muteSelectedAudioUser = new JButton("Mute selected", Utils.getIcon("icomoon/32px/299-volume-mute2.png", 16, true));
+        muteSelectedAudioUser = new JButton("Mute", Utils.getIcon("icomoon/32px/299-volume-mute2.png", 16, true));
+        muteSelectedAudioUser.setToolTipText("Mute the selected user");
         muteSelectedAudioUser.addActionListener(e -> muteSelectedAudioUser());
 
-        muteSearchedAudioUser = new JButton("Mute by search", Utils.getIcon("icomoon/32px/135-search.png", 16, true));
+        muteSearchedAudioUser = new JButton("Mute", Utils.getIcon("icomoon/32px/135-search.png", 16, true));
+        muteSearchedAudioUser.setToolTipText("Mute the searched user");
         muteSearchedAudioUser.addActionListener(e -> muteSearchedAudioUser());
 
-        unmuteSelectedAudioUser = new JButton("Unmute selected", Utils.getIcon("icomoon/32px/295-volume-high.png", 16, true));
+        unmuteSelectedAudioUser = new JButton("Unmute", Utils.getIcon("icomoon/32px/295-volume-high.png", 16, true));
+        unmuteSelectedAudioUser.setToolTipText("Unmute the selected user");
         unmuteSelectedAudioUser.addActionListener(e -> unmuteSelectedAudioUser());
 
-        clearMutedAudioUsers = new JButton("Clear muted", Utils.getIcon("icomoon/32px/272-cross.png", 16, true));
+        clearMutedAudioUsers = new JButton("Clear", Utils.getIcon("icomoon/32px/272-cross.png", 16, true));
+        clearMutedAudioUsers.setToolTipText("Clear all muted users");
         clearMutedAudioUsers.addActionListener(e -> clearMutedAudioUsers());
 
-        refreshAudioUsers = new JButton("Refresh users", Utils.getIcon("icomoon/32px/303-loop2.png", 16, true));
+        refreshAudioUsers = new JButton("Refresh", Utils.getIcon("icomoon/32px/303-loop2.png", 16, true));
+        refreshAudioUsers.setToolTipText("Refresh users in channel and muted users");
         refreshAudioUsers.addActionListener(e -> {
             updateAudioUsers();
             updateMutedAudioUsers();
@@ -226,17 +246,31 @@ public class MaintenancePanel extends JPanel implements EventListener {
         setLayout(new BorderLayout(8, 8));
         setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
+        // uniform, comfortable action-button size: not stretched edge-to-edge, not tiny
+        Dimension actionSize = new Dimension(132, 32);
+        for (JButton b : new JButton[]{joinChannel, leaveChannel, restartAudio, setAutoJoin, clearAutoJoin,
+                refreshChannels, muteSelectedAudioUser, unmuteSelectedAudioUser, clearMutedAudioUsers, refreshAudioUsers}) {
+            b.setPreferredSize(actionSize);
+        }
+
+        // ---- left: guilds ----
         JPanel guildPanel = new JPanel(new BorderLayout(6, 6));
         guildPanel.setBorder(BorderFactory.createTitledBorder("Guilds"));
-        guildPanel.add(new JScrollPane(guilds), BorderLayout.CENTER);
-        guildPanel.add(Utils.buildFlowPanel(addGuild, removeGuild), BorderLayout.SOUTH);
+        JScrollPane guildScroll = new JScrollPane(guilds);
+        guildScroll.setPreferredSize(new Dimension(150, 240)); // narrow guild column
+        guildPanel.add(guildScroll, BorderLayout.CENTER);
+        JPanel guildButtons = new JPanel(new GridLayout(2, 1, 0, 6)); // stacked so the column can stay narrow
+        guildButtons.add(addGuild);
+        guildButtons.add(removeGuild);
+        guildPanel.add(guildButtons, BorderLayout.SOUTH);
 
+        // ---- voice control: status + channel list + channel actions ----
         JPanel statusPanel = new JPanel(new GridLayout(0, 1, 0, 3));
         statusPanel.add(connectionStatus);
         statusPanel.add(permissionStatus);
         statusPanel.add(autoJoinStatus);
 
-        JPanel channelActions = new JPanel(new GridLayout(0, 3, 6, 6));
+        JPanel channelActions = new JPanel(new GridLayout(0, 3, 6, 6)); // 3 columns -> 2 rows
         channelActions.add(joinChannel);
         channelActions.add(leaveChannel);
         channelActions.add(restartAudio);
@@ -244,7 +278,17 @@ public class MaintenancePanel extends JPanel implements EventListener {
         channelActions.add(clearAutoJoin);
         channelActions.add(refreshChannels);
 
-        JPanel audioUserLists = new JPanel(new GridLayout(1, 2, 6, 6));
+        JScrollPane channelScroll = new JScrollPane(audioChannels);
+        channelScroll.setPreferredSize(new Dimension(300, 150));
+
+        JPanel voiceControl = new JPanel(new BorderLayout(6, 6));
+        voiceControl.setBorder(BorderFactory.createTitledBorder("Voice control"));
+        voiceControl.add(statusPanel, BorderLayout.NORTH);
+        voiceControl.add(channelScroll, BorderLayout.CENTER);
+        voiceControl.add(leftWrap(channelActions), BorderLayout.SOUTH);
+
+        // ---- audio user mute: stacked lists + search + mute actions ----
+        JPanel audioUserLists = new JPanel(new GridLayout(1, 2, 6, 6)); // side by side
         audioUserLists.add(buildTitledPanel("Users in channel", new JScrollPane(audioUsers)));
         audioUserLists.add(buildTitledPanel("Muted users", new JScrollPane(mutedAudioUsers)));
 
@@ -252,7 +296,7 @@ public class MaintenancePanel extends JPanel implements EventListener {
         audioUserSearchPanel.add(audioUserSearch, BorderLayout.CENTER);
         audioUserSearchPanel.add(muteSearchedAudioUser, BorderLayout.EAST);
 
-        JPanel audioUserActions = new JPanel(new GridLayout(0, 4, 6, 6));
+        JPanel audioUserActions = new JPanel(new GridLayout(0, 2, 6, 6));
         audioUserActions.add(muteSelectedAudioUser);
         audioUserActions.add(unmuteSelectedAudioUser);
         audioUserActions.add(clearMutedAudioUsers);
@@ -260,7 +304,7 @@ public class MaintenancePanel extends JPanel implements EventListener {
 
         JPanel audioUserControls = new JPanel(new BorderLayout(0, 6));
         audioUserControls.add(audioUserSearchPanel, BorderLayout.NORTH);
-        audioUserControls.add(audioUserActions, BorderLayout.SOUTH);
+        audioUserControls.add(leftWrap(audioUserActions), BorderLayout.SOUTH);
 
         JPanel audioUserPanel = new JPanel(new BorderLayout(6, 6));
         audioUserPanel.setBorder(BorderFactory.createTitledBorder("Audio user mute"));
@@ -268,18 +312,13 @@ public class MaintenancePanel extends JPanel implements EventListener {
         audioUserPanel.add(audioUserLists, BorderLayout.CENTER);
         audioUserPanel.add(audioUserControls, BorderLayout.SOUTH);
 
-        JSplitPane audioSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(audioChannels), audioUserPanel);
-        audioSplitPane.setResizeWeight(0.45d);
-        audioSplitPane.setBorder(BorderFactory.createEmptyBorder());
+        // right side: voice control above audio-user-mute, resizable vertically
+        JSplitPane rightSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, voiceControl, audioUserPanel);
+        rightSplit.setResizeWeight(0.5d);
+        rightSplit.setBorder(BorderFactory.createEmptyBorder());
 
-        JPanel voicePanel = new JPanel(new BorderLayout(6, 6));
-        voicePanel.setBorder(BorderFactory.createTitledBorder("Voice control"));
-        voicePanel.add(statusPanel, BorderLayout.NORTH);
-        voicePanel.add(audioSplitPane, BorderLayout.CENTER);
-        voicePanel.add(channelActions, BorderLayout.SOUTH);
-
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, guildPanel, voicePanel);
-        splitPane.setResizeWeight(0.35d);
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, guildPanel, rightSplit);
+        splitPane.setResizeWeight(0.18d);
         splitPane.setBorder(BorderFactory.createEmptyBorder());
         add(splitPane, BorderLayout.CENTER);
     }
@@ -475,22 +514,29 @@ public class MaintenancePanel extends JPanel implements EventListener {
         refreshAudioUsers.setEnabled(hasGuild);
 
         if (!hasGuild) {
-            connectionStatus.setText("Connected channel: N/A");
-            permissionStatus.setText("Permissions: N/A");
-            autoJoinStatus.setText("Auto-join: N/A");
-            mutedAudioStatus.setText("Muted audio users: N/A");
+            connectionStatus.setText(statusHtml("Connected channel:", "N/A", MUTED_TEXT));
+            permissionStatus.setText(statusHtml("Permissions:", "N/A", MUTED_TEXT));
+            autoJoinStatus.setText(statusHtml("Auto-join:", "N/A", MUTED_TEXT));
+            mutedAudioStatus.setText(statusHtml("Muted audio users:", "N/A", MUTED_TEXT));
             return;
         }
 
-        connectionStatus.setText("Connected channel: " + (connectedChannel != null ? connectedChannel.getName() : "none"));
-        permissionStatus.setText("Permissions: " + (hasChannel ? (canConnect ? "can join selected channel" : "cannot join selected channel") : "select a channel"));
+        connectionStatus.setText(statusHtml("Connected channel:",
+                connectedChannel != null ? connectedChannel.getName() : "none",
+                connectedChannel != null ? Utils.colorGreen : MUTED_TEXT));
+        permissionStatus.setText(statusHtml("Permissions:",
+                hasChannel ? (canConnect ? "can join selected channel" : "cannot join selected channel") : "select a channel",
+                MUTED_TEXT));
 
         GuildConfig guildConfig = DiscordAudioStreamBot.getConfig().getGuildConfig(guild);
         AudioChannel autoJoinChannel = formatConfiguredAudioChannel(guild, guildConfig.autoJoinAudioChannelId);
-        autoJoinStatus.setText("Auto-join: " + (autoJoinChannel != null ? autoJoinChannel.getName() : "none"));
+        autoJoinStatus.setText(statusHtml("Auto-join:",
+                autoJoinChannel != null ? autoJoinChannel.getName() : "none", MUTED_TEXT));
 
         AudioChannel audioUserSourceChannel = getAudioUserSourceChannel(guild);
-        mutedAudioStatus.setText("Users shown from: " + (audioUserSourceChannel != null ? audioUserSourceChannel.getName() : "none") + " | Muted: " + mutedAudioUserCount);
+        mutedAudioStatus.setText(statusHtml("Users shown from:",
+                (audioUserSourceChannel != null ? audioUserSourceChannel.getName() : "none") + "  |  Muted: " + mutedAudioUserCount,
+                MUTED_TEXT));
     }
 
     private void muteSelectedAudioUser() {
@@ -615,6 +661,22 @@ public class MaintenancePanel extends JPanel implements EventListener {
         Member member = guild.getMemberById(userId);
         User user = member != null ? member.getUser() : DiscordAudioStreamBot.getInstance().getJDA().getUserById(userId);
         return user != null ? Utils.formatUser(user) : userId;
+    }
+
+    private static String statusHtml(String label, String value, Color valueColor) {
+        String hex = String.format("#%06X", valueColor.getRGB() & 0xFFFFFF);
+        return "<html>" + escapeHtml(label) + " <font color='" + hex + "'>" + escapeHtml(value) + "</font></html>";
+    }
+
+    private static String escapeHtml(String text) {
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    /** Keeps a component at its natural (preferred) width, left-aligned, instead of stretching it. */
+    private static JPanel leftWrap(JComponent c) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.add(c, BorderLayout.WEST);
+        return p;
     }
 
     private JPanel buildTitledPanel(String title, JComponent content) {

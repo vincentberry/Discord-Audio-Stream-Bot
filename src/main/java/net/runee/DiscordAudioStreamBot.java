@@ -247,7 +247,7 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
     public void onGuildVoiceUpdate(@NotNull GuildVoiceUpdateEvent event) {
         if (jda != null && Objects.equals(event.getMember().getId(), jda.getSelfUser().getId())) {
             EventQueue.invokeLater(() -> {
-                MainFrame.getInstance().tabHome.onVoiceStateChanged();
+                MainFrame.getInstance().tabSettings.onVoiceStateChanged();
                 MainFrame.getInstance().tabMaintain.onVoiceStateChanged(event.getGuild());
             });
         }
@@ -279,12 +279,12 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
 
     @Override
     public void onShutdown(@Nonnull ShutdownEvent e) {
-        EventQueue.invokeLater(() -> MainFrame.getInstance().tabHome.onGatewayPing(null));
+        EventQueue.invokeLater(() -> MainFrame.getInstance().tabSettings.onGatewayPing(null));
     }
 
     @Override
     public void onGatewayPing(@NotNull GatewayPingEvent e) {
-        EventQueue.invokeLater(() -> MainFrame.getInstance().tabHome.onGatewayPing(e.getNewPing()));
+        EventQueue.invokeLater(() -> MainFrame.getInstance().tabSettings.onGatewayPing(e.getNewPing()));
     }
 
     @Override
@@ -352,7 +352,7 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
         audioManager.setConnectionListener(new ConnectionListener() {
             @Override
             public void onPing(long ping) {
-                EventQueue.invokeLater(() -> MainFrame.getInstance().tabHome.onAudioPing(channel.getGuild(), ping));
+                EventQueue.invokeLater(() -> MainFrame.getInstance().tabSettings.onAudioPing(channel.getGuild(), ping));
             }
 
             @Override
@@ -371,7 +371,7 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
                             if (sendingHandler instanceof SpeakHandler) {
                                 ((SpeakHandler) sendingHandler).setPlaying(false);
                             }
-                            EventQueue.invokeLater(() -> MainFrame.getInstance().tabHome.onAudioPing(channel.getGuild(), null));
+                            EventQueue.invokeLater(() -> MainFrame.getInstance().tabSettings.onAudioPing(channel.getGuild(), null));
                             break;
                         }
                     }
@@ -382,7 +382,7 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
         });
         audioManager.openAudioConnection(channel);
         EventQueue.invokeLater(() -> {
-            MainFrame.getInstance().tabHome.onVoiceStateChanged();
+            MainFrame.getInstance().tabSettings.onVoiceStateChanged();
             MainFrame.getInstance().tabMaintain.onVoiceStateChanged(channel.getGuild());
         });
     }
@@ -397,7 +397,7 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
                 audioManager.closeAudioConnection();
             }
             EventQueue.invokeLater(() -> {
-                MainFrame.getInstance().tabHome.onVoiceStateChanged();
+                MainFrame.getInstance().tabSettings.onVoiceStateChanged();
                 MainFrame.getInstance().tabMaintain.onVoiceStateChanged(guild);
             });
         }
@@ -512,7 +512,7 @@ public class DiscordAudioStreamBot extends ListenerAdapter {
             updateSpeakState(audioManager, null, null);
             updateListenState(audioManager, null, null);
             EventQueue.invokeLater(() -> {
-                MainFrame.getInstance().tabHome.onVoiceStateChanged();
+                MainFrame.getInstance().tabSettings.onVoiceStateChanged();
                 MainFrame.getInstance().tabMaintain.onVoiceStateChanged(guild);
             });
         }
