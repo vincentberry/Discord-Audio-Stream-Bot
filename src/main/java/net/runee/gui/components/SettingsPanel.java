@@ -56,6 +56,7 @@ public class SettingsPanel extends JPanel implements EventListener {
     private JPasswordField botToken;
     private JCheckBox autoLogin;
     private JCheckBox autoUpdate;
+    private JCheckBox minimizeToTray;
 
     // audio
     private JButton speakEnabled;
@@ -120,6 +121,13 @@ public class SettingsPanel extends JPanel implements EventListener {
         autoUpdate.addActionListener(e -> {
             final Config cfg = DiscordAudioStreamBot.getConfig();
             cfg.autoUpdate = autoUpdate.isSelected();
+            saveConfig();
+        });
+        minimizeToTray = new JCheckBox();
+        minimizeToTray.setToolTipText("Hide to the system tray when minimizing or closing the window (the bot keeps running)");
+        minimizeToTray.addActionListener(e -> {
+            final Config cfg = DiscordAudioStreamBot.getConfig();
+            cfg.minimizeToTray = minimizeToTray.isSelected();
             saveConfig();
         });
 
@@ -207,6 +215,11 @@ public class SettingsPanel extends JPanel implements EventListener {
         botToken.setText(Utils.nullToEmptyString(cfg.botToken));
         autoLogin.setSelected(cfg.isAutoLogin());
         autoUpdate.setSelected(cfg.isAutoUpdate());
+        minimizeToTray.setSelected(cfg.isMinimizeToTray());
+        if (!SystemTray.isSupported()) {
+            minimizeToTray.setEnabled(false);
+            minimizeToTray.setToolTipText("The system tray is not available on this platform");
+        }
         updateAutoLoginEnabled();
 
         // voice
@@ -305,6 +318,8 @@ public class SettingsPanel extends JPanel implements EventListener {
                 /**/.add(autoLogin).xy(7, row)
                 .add("Auto update").xy(5, row += 2)
                 /**/.add(autoUpdate).xy(7, row)
+                /**/.add("Minimize to tray").xy(1, row)
+                /**/.add(minimizeToTray).xy(3, row)
                 .add("Connection").xy(1, row += 2)
                 /**/.add(buildConnectionPanel()).xyw(3, row, 5)
                 .addSeparator("Audio").xyw(1, row += 2, 7)
