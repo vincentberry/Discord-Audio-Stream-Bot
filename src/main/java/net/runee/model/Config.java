@@ -10,6 +10,7 @@ public class Config {
     public String botToken;
     public Boolean autoLogin;
     public Boolean autoUpdate;
+    public Boolean minimizeToTray;
     public Boolean speakEnabled;
     public String recordingDevice;
     public Boolean listenEnabled;
@@ -27,6 +28,7 @@ public class Config {
         this.botToken = copy.botToken;
         this.autoLogin = copy.autoLogin;
         this.autoUpdate = copy.autoUpdate;
+        this.minimizeToTray = copy.minimizeToTray;
         this.speakEnabled = copy.speakEnabled;
         this.recordingDevice = copy.recordingDevice;
         this.listenEnabled = copy.listenEnabled;
@@ -45,6 +47,10 @@ public class Config {
 
     public boolean isAutoUpdate() {
         return autoUpdate != null ? autoUpdate : true;
+    }
+
+    public boolean isMinimizeToTray() {
+        return minimizeToTray != null ? minimizeToTray : true;
     }
 
     public boolean getSpeakEnabled() {

@@ -171,6 +171,7 @@ public class MainFrame extends JFrame implements Runnable {
     private JToggleButton navSettings;
     public MaintenancePanel tabMaintain;
     public SettingsPanel tabSettings;
+    private TrayManager tray;
 
     private MainFrame() {
         updateTitle();
@@ -189,22 +190,54 @@ public class MainFrame extends JFrame implements Runnable {
 
             @Override
             public void windowClosing(WindowEvent e) {
-                JDA jda = DiscordAudioStreamBot.getInstance().getJDA();
-                if (jda != null) {
-                    jda.shutdownNow();
+                if (shouldHideToTray()) {
+                    tray.hideToTray();
+                } else {
+                    exitApplication();
                 }
-                MainFrame.this.dispose();
-                System.exit(0);
+            }
+
+            @Override
+            public void windowIconified(WindowEvent e) {
+                if (shouldHideToTray()) {
+                    tray.hideToTray();
+                }
             }
         });
 
         initComponents();
         layoutComponents();
 
+        tray = new TrayManager(this);
+        tray.install();
+        tray.setTooltip(getTitle());
+
         Dimension minSize = new Dimension(840, 650);
         setMinimumSize(minSize);
         pack();
         setSize(minSize); // open at the minimum size by default
+    }
+
+    private boolean shouldHideToTray() {
+        return tray != null && tray.isActive() && DiscordAudioStreamBot.getConfig().isMinimizeToTray();
+    }
+
+    /** True when the system tray is available, so the "minimize to tray" option is meaningful. */
+    public boolean isTraySupported() {
+        return tray != null && tray.isActive();
+    }
+
+    /** Real shutdown: stops the bot, removes the tray icon and exits the JVM. */
+    public void exitApplication() {
+        JDA jda = DiscordAudioStreamBot.getInstance().getJDA();
+        if (jda != null) {
+            jda.shutdownNow();
+        }
+        if (tray != null) {
+            tray.remove();
+        }
+        dispose();
+        System.exit(0);
     }
 
     private void initComponents() {
@@ -325,6 +358,9 @@ public class MainFrame extends JFrame implements Runnable {
             title += " [" + jda.getSelfUser().getName() + "]";
         }
         setTitle(title);
+        if (tray != null) {
+            tray.setTooltip(title);
+        }
     }
 
     private String format(JDA.Status status) {
