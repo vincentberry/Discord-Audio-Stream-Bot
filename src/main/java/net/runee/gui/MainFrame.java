@@ -1,10 +1,12 @@
 package net.runee.gui;
 
+import com.formdev.flatlaf.FlatClientProperties;
+import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.FlatLightLaf;
 import jouvieje.bass.BassInit;
 import net.dv8tion.jda.api.JDA;
 import net.runee.DiscordAudioStreamBot;
 import net.runee.gui.components.MaintenancePanel;
-import net.runee.gui.components.HomePanel;
 import net.runee.gui.components.SettingsPanel;
 import net.runee.misc.Utils;
 import net.runee.misc.gui.BorderPanel;
@@ -15,6 +17,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.net.URISyntaxException;
@@ -43,9 +47,12 @@ public class MainFrame extends JFrame implements Runnable {
         logger.info("Hello World!");
         Utils.printSystemInfo();
 
-        // set L&F
+        // set L&F (FlatLaf "Rail d'icones" theme; see resources/net/runee/resources/theme/FlatLaf.properties)
+        System.setProperty("flatlaf.useWindowDecorations", "true");
+        System.setProperty("flatlaf.menuBarEmbedded", "true");
         try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            FlatLaf.registerCustomDefaultsSource("net.runee.resources.theme");
+            FlatLightLaf.setup();
         } catch (Throwable ex) {
             logger.warn("Failed to set L&F", ex);
         }
@@ -146,17 +153,29 @@ public class MainFrame extends JFrame implements Runnable {
         }
     }
 
-    private JTabbedPane tabs;
-    private int idxHome;
-    public HomePanel tabHome;
-    private int idxMaintain;
+    private static final Color RAIL_BG = new Color(0x23262E);
+    private static final Color RAIL_BORDER = new Color(0x1A1C22);
+    private static final Color ACCENT = new Color(0x3A40AC);
+    private static final Color NAV_INACTIVE = new Color(0xAEB4C2);
+    private static final Color NAV_HOVER = new Color(0x393D46);
+
+    private static final Color NAV_DISABLED = new Color(0x5A6273);
+
+    private static final String CARD_MAINTAIN = "maintenance";
+    private static final String CARD_SETTINGS = "settings";
+    private static final String APP_ICON = "Logo.svg";
+
+    private CardLayout cards;
+    private JPanel content;
+    private JToggleButton navMaintain;
+    private JToggleButton navSettings;
     public MaintenancePanel tabMaintain;
-    private int idxSettings;
     public SettingsPanel tabSettings;
 
     private MainFrame() {
         updateTitle();
-        setIconImage(Utils.getIcon("icomoon/32px/017-headphones.png", 32, true).getImage());
+        setIconImages(Utils.getSvgIconImages(APP_ICON, 16, 24, 32, 48, 64, 128, 256));
+        getRootPane().putClientProperty(FlatClientProperties.TITLE_BAR_SHOW_ICON, true);
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
             @Override
@@ -164,7 +183,7 @@ public class MainFrame extends JFrame implements Runnable {
                 final Config config = DiscordAudioStreamBot.getConfig();
                 AutoUpdater.checkForUpdatesInBackground(MainFrame.this);
                 if(config.botToken != null && config.isAutoLogin()) {
-                    tabHome.loginButtonPressed(1);
+                    tabSettings.loginButtonPressed(1);
                 }
             }
 
@@ -182,43 +201,114 @@ public class MainFrame extends JFrame implements Runnable {
         initComponents();
         layoutComponents();
 
-        setMinimumSize(new Dimension(800, 600));
+        Dimension minSize = new Dimension(840, 650);
+        setMinimumSize(minSize);
         pack();
+        setSize(minSize); // open at the minimum size by default
     }
 
     private void initComponents() {
-        tabs = new JTabbedPane();
-        tabHome = new HomePanel(this);
         tabMaintain = new MaintenancePanel();
-        tabSettings = new SettingsPanel();
+        tabSettings = new SettingsPanel(this);
 
-        // home
-        idxHome = tabs.getTabCount();
-        tabs.addTab("Home", getTabIcon("001-home"), new BorderPanel(tabHome));
+        cards = new CardLayout();
+        content = new JPanel(cards);
+        content.add(new BorderPanel(tabSettings), CARD_SETTINGS);
+        content.add(new BorderPanel(tabMaintain), CARD_MAINTAIN);
 
-        // maintenance
-        idxMaintain = tabs.getTabCount();
-        tabs.addTab("Maintenance", getTabIcon("146-wrench"), new BorderPanel(tabMaintain));
-        tabs.setEnabledAt(idxMaintain, false);
+        navSettings = createNavButton("Settings", "190-menu", CARD_SETTINGS);
+        navMaintain = createNavButton("Maintenance", "146-wrench", CARD_MAINTAIN);
+        navMaintain.setEnabled(false);
 
-        // settings
-        idxSettings = tabs.getTabCount();
-        tabs.addTab("Settings", getTabIcon("190-menu"), new BorderPanel(tabSettings));
+        ButtonGroup navGroup = new ButtonGroup();
+        navGroup.add(navSettings);
+        navGroup.add(navMaintain);
+        navSettings.setSelected(true);
     }
 
-    private Icon getTabIcon(String file) {
-        return Utils.getIcon("icomoon/32px/" + file + ".png", 24, true);
+    /**
+     * Builds one entry of the left navigation rail: an icon-over-label toggle button that fills
+     * with the indigo accent when selected (white icon/text) and blends into the dark rail otherwise.
+     */
+    private JToggleButton createNavButton(String text, String iconFile, String card) {
+        ImageIcon base = Utils.getIcon("icomoon/32px/" + iconFile + ".png", 19, true);
+        final ImageIcon inactiveIcon = Utils.tintIcon(base, NAV_INACTIVE);
+        final ImageIcon activeIcon = Utils.tintIcon(base, Color.WHITE);
+
+        final JToggleButton b = new JToggleButton(text, inactiveIcon);
+        b.setDisabledIcon(Utils.tintIcon(base, NAV_DISABLED));
+        b.setVerticalTextPosition(SwingConstants.BOTTOM);
+        b.setHorizontalTextPosition(SwingConstants.CENTER);
+        b.setIconTextGap(4);
+        b.setFont(b.getFont().deriveFont(9.5f));
+        b.setForeground(NAV_INACTIVE);
+        b.setBackground(RAIL_BG);
+        b.setOpaque(true);
+        b.setFocusPainted(false);
+        b.setBorder(BorderFactory.createEmptyBorder(9, 1, 9, 1));
+        b.setAlignmentX(Component.CENTER_ALIGNMENT);
+        b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 58));
+        b.putClientProperty(FlatClientProperties.STYLE,
+                "arc: 9; focusWidth: 0; innerFocusWidth: 0; borderWidth: 0; "
+                        + "disabledBackground: #23262E; disabledForeground: #5A6273");
+        b.addItemListener(e -> {
+            boolean selected = b.isSelected();
+            b.setBackground(selected ? ACCENT : RAIL_BG);
+            b.setForeground(selected ? Color.WHITE : NAV_INACTIVE);
+            b.setIcon(selected ? activeIcon : inactiveIcon);
+        });
+        b.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (b.isEnabled() && !b.isSelected()) {
+                    b.setBackground(NAV_HOVER);
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (!b.isSelected()) {
+                    b.setBackground(RAIL_BG);
+                }
+            }
+        });
+        b.addActionListener(e -> cards.show(content, card));
+        return b;
+    }
+
+    private JPanel buildRail() {
+        JPanel rail = new JPanel();
+        rail.setLayout(new BoxLayout(rail, BoxLayout.Y_AXIS));
+        rail.setBackground(RAIL_BG);
+        rail.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 0, 1, RAIL_BORDER),
+                BorderFactory.createEmptyBorder(10, 8, 10, 8)
+        ));
+        rail.setPreferredSize(new Dimension(80, 0));
+
+        rail.add(navSettings);
+        rail.add(Box.createVerticalStrut(6));
+        rail.add(navMaintain);
+        rail.add(Box.createVerticalGlue());
+        return rail;
     }
 
     private void layoutComponents() {
-        setContentPane(tabs);
+        JPanel root = new JPanel(new BorderLayout());
+        root.add(buildRail(), BorderLayout.WEST);
+        root.add(content, BorderLayout.CENTER);
+        setContentPane(root);
     }
 
     public void updateLoginStatus(JDA.Status status) {
         updateTitle();
-        tabs.setEnabledAt(idxMaintain, status == JDA.Status.CONNECTED);
+        boolean connected = status == JDA.Status.CONNECTED;
+        navMaintain.setEnabled(connected);
+        if (!connected && navMaintain.isSelected()) {
+            navSettings.setSelected(true);
+            cards.show(content, CARD_SETTINGS);
+        }
         tabMaintain.updateLoginStatus(status);
-        tabSettings.updateLoginStatus(status);
     }
 
     @Override

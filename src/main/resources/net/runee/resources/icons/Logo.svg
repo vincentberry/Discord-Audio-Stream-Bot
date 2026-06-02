@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Logo robot à casque — Deep">
+  <rect width="512" height="512" rx="116" fill="#4752C4"></rect>
+  <g fill="#ffffff" transform="translate(0,24)">
+    <rect x="248" y="56" width="16" height="46" rx="8"></rect>
+    <circle cx="256" cy="48" r="15"></circle>
+    <path d="M96 250 C 96 68, 416 68, 416 250" fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round"></path>
+    <rect x="66" y="206" width="54" height="108" rx="24"></rect>
+    <rect x="392" y="206" width="54" height="108" rx="24"></rect>
+    <path d="M129 250 C 129 112, 383 112, 383 250 L 383 306 Q 383 362, 327 362 L 185 362 Q 129 362, 129 306 Z"></path>
+    <path d="M419 308 C 419 362, 372 376, 332 368" fill="none" stroke="#ffffff" stroke-width="17" stroke-linecap="round"></path>
+    <rect x="294" y="352" width="40" height="28" rx="14"></rect>
+  </g>
+  <g transform="translate(0,24)">
+    <rect x="178" y="232" width="50" height="34" rx="17" fill="#4752C4"></rect>
+    <rect x="284" y="232" width="50" height="34" rx="17" fill="#4752C4"></rect>
+    <rect x="206" y="300" width="100" height="20" rx="10" fill="#4752C4"></rect>
+  </g>
+</svg>
