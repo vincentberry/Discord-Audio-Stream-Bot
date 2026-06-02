@@ -1,8 +1,7 @@
-# Discord Audio Stream Bot
-
-<p align="center">
-  <img src="src/main/resources/net/runee/resources/icons/Logo.svg" alt="Discord Audio Stream Bot logo" width="96" height="96">
-</p>
+<h1>
+  <img src="src/main/resources/net/runee/resources/icons/Logo.svg" alt="Discord Audio Stream Bot logo" width="48" height="48" align="center">
+  Discord Audio Stream Bot
+</h1>
 
 Desktop application for streaming local audio to a Discord voice channel through a bot account.
 
@@ -17,6 +16,7 @@ Desktop application for streaming local audio to a Discord voice channel through
 - Desktop UI for configuring the bot token, audio devices, and voice channels.
 - Maintenance tab showing the connected voice channel, permissions, auto-join settings, ignored audio users, and audio restart controls.
 - Discord slash commands for joining/leaving voice, auto-join, follow-audio, muting listened users, and restarting the audio pipeline.
+- Cross-platform hide-to-tray support on Windows, Linux, and macOS when the system tray is available.
 - Native Windows, Linux, and macOS builds with a bundled Java runtime.
 
 ## Installation
@@ -56,6 +56,14 @@ To stream audio to Discord:
 4. Join a voice or stage channel with `/join` or from the `Maintenance` tab.
 
 To stream audio from an application or game, use a virtual audio cable such as [VB-Audio Virtual Cable](https://www.vb-audio.com/Cable/), then select its output as the recording device in this app.
+
+## System Tray
+
+When `Minimize to tray` is enabled in `Settings`, closing the window with `X` or minimizing it hides the window in the system tray and keeps the bot running in the background.
+
+The tray icon uses the application logo and provides a menu with `Show` and `Quit`. Double-clicking the tray icon restores the window, while `Quit` performs a real shutdown.
+
+`Minimize to tray` is enabled by default. If the platform does not support `SystemTray`, the setting is disabled and the app falls back to the classic window behavior.
 
 ## Discord Commands
 
