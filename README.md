@@ -1,5 +1,9 @@
 # Discord Audio Stream Bot
 
+<p align="center">
+  <img src="src/main/resources/net/runee/resources/icons/Logo.svg" alt="Discord Audio Stream Bot logo" width="96" height="96">
+</p>
+
 Desktop application for streaming local audio to a Discord voice channel through a bot account.
 
 > This project is a fork/continuation of the original
