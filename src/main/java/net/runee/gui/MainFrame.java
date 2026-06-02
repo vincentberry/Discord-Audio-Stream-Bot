@@ -174,6 +174,7 @@ public class MainFrame extends JFrame implements Runnable {
     private MainFrame() {
         updateTitle();
         setIconImage(Utils.getIcon("icomoon/32px/017-headphones.png", 32, true).getImage());
+        getRootPane().putClientProperty(FlatClientProperties.TITLE_BAR_SHOW_ICON, false);
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
             @Override
